@@ -13,25 +13,31 @@ use Giann\Schematics\StringSchema;
 #[ObjectSchema]
 class Person
 {
-    #[StringSchema(format: StringFormat::Uuid)]
-    public string $id;
+    public function __construct(
+        #[StringSchema(format: StringFormat::Uuid)]
+        public string $id,
 
-    #[ArraySchema(items: new StringSchema(), minContains: 1)]
-    public array $names;
+        #[ArraySchema(items: new StringSchema(), minContains: 1)]
+        public array $names,
 
-    #[NumberSchema(integer: true, minimum: 0)]
-    public int $age;
+        #[NumberSchema(integer: true, minimum: 0)]
+        public int $age,
 
-    // Infered $ref to self
-    public Person $father;
+        // Infered $ref to self
+        public Person $father,
+    ) {
+    }
 }
 
 // Infer $allOf Person
 #[ObjectSchema(additionalProperties: false)]
 class Hero extends Person
 {
-    // Infers string property
-    public string $superName;
+    public function __construct(
+        // Infers string property
+        public string $superName
+    ) {
+    }
 }
 
 final class GenerateJsonSchemaTest extends TestCase
