@@ -4,9 +4,9 @@
 
 pkgs.mkShell {
   buildInputs = [
-    pkgs.php74
-    pkgs.php74Packages.psysh
-    pkgs.php74Packages.composer
+    pkgs.php81
+    pkgs.php81Packages.psysh
+    pkgs.php81Packages.composer
     pkgs.symfony-cli
   ];
 }

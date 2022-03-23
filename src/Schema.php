@@ -2,6 +2,18 @@
 
 declare(strict_types=1);
 
+namespace Giann\Schematics;
+
+use Attribute;
+use JsonSerializable;
+use ReflectionClass;
+use InvalidArgumentException;
+use ReflectionAttribute;
+use ReflectionNamedType;
+use ReflectionUnionType;
+use ReflectionIntersectionType;
+use Exception;
+
 enum SchemaType: string
 {
     case String = 'string';
@@ -17,7 +29,7 @@ enum SchemaType: string
 class Schema implements JsonSerializable
 {
     public function __construct(
-        public SchemaType|array $type,
+        public SchemaType|array|null $type = null,
         public ?string $id = null,
         public ?string $anchor = null,
         public ?string $ref = null,
@@ -34,8 +46,12 @@ class Schema implements JsonSerializable
     ) {
     }
 
-    protected function classSchema(string $class): Schema
+    public static function classSchema(string $class, ?Schema $root = null): Schema | string
     {
+        if ($class === '#') {
+            return '#';
+        }
+
         $classReflection = new ReflectionClass($class);
         $classAttributes = $classReflection->getAttributes();
 
@@ -43,27 +59,44 @@ class Schema implements JsonSerializable
             throw new InvalidArgumentException('The class ' . $class . ' is not annotated');
         }
 
-        /** @var ObjectSchema */
-        $rootSchema = current(
+        $rootSchemaAnnotation = current(
             array_filter(
                 $classAttributes,
                 fn (ReflectionAttribute $attribute) => $attribute->newInstance() instanceof ObjectSchema
             )
         );
 
-        if ($rootSchema === false) {
+        if ($rootSchemaAnnotation === false) {
             throw new InvalidArgumentException('The class ' . $class . ' is not annotated');
         }
+
+        /** @var Schema */
+        $rootSchema = $rootSchemaAnnotation->newInstance();
+        $root = $root ?? $rootSchema;
 
         // Does it extends another class/schema?
         $parentReflection = $classReflection->getParentClass();
         if ($parentReflection !== false) {
-            $rootSchema->allOf = ($rootSchema->allOf ?? []) + [self::classSchema($parentReflection->getName())];
+            $parent = $parentReflection->getName();
+
+            $root->definitions = $root->definitions ?? [];
+            $root->definitions[$parent] = $root->definitions[$parent] ?? self::classSchema($parent, $root);
+
+            $rootSchema->allOf = ($rootSchema->allOf ?? [])
+                + [new Schema(ref: $parent)];
         }
 
         // TODO: we could also use getters
         $properties = $classReflection->getProperties();
         foreach ($properties as $property) {
+            // Ignore properties coming from parent class
+            if (
+                $property->getDeclaringClass()->getNamespaceName() . '\\' . $property->getDeclaringClass()->getName()
+                !== $classReflection->getNamespaceName() . '\\' . $classReflection->getName()
+            ) {
+                continue;
+            }
+
             $propertyAttributes = $property->getAttributes();
 
             $propertySchema = current(
@@ -73,8 +106,8 @@ class Schema implements JsonSerializable
                 )
             );
 
-            if ($propertySchema !== null) {
-                $rootSchema->properties[$property->getName()] = $propertySchema;
+            if ($propertySchema !== false) {
+                $rootSchema->properties[$property->getName()] = $propertySchema->newInstance();
             } else {
                 // Not annotated, try to infer something
                 $propertyType = $property->getType();
@@ -102,18 +135,29 @@ class Schema implements JsonSerializable
                             break;
                         default: // Is it a class?
                             try {
-                                $propertySchema = self::classSchema($type);
+                                // Self reference
+                                if ($type === $classReflection->getName()) {
+                                    $type = $root == $rootSchema ? '#' : $type;
+                                }
+
+                                $propertySchema = new Schema(ref: $type);
                             } catch (Exception $_) {
                                 // Discard the property
                             }
                     }
 
-                    if ($propertySchema !== null && $propertyType->allowsNull()) {
-                        $propertySchema->type = [$propertySchema->type, SchemaType::Null];
+                    if ($propertySchema !== null) {
+                        if ($propertyType->allowsNull()) {
+                            $propertySchema->type = [$propertySchema->type, SchemaType::Null];
+                        }
+
+                        $rootSchema->properties[$property->getName()] = $propertySchema;
                     }
                 } else if ($propertySchema instanceof ReflectionUnionType) {
+                    // TODO: oneOf: [ type1, type2, ... ]
                     throw "Not implemented";
                 } else if ($propertySchema instanceof ReflectionIntersectionType) {
+                    // TODO: allOf: [ propTypeA, propTypeB, ... ]
                     throw "Not implemented";
                 }
             }
@@ -124,28 +168,12 @@ class Schema implements JsonSerializable
 
     public function jsonSerialize(): mixed
     {
-        $defs = null;
-        if ($this->defs !== null) {
-            $defs = [];
-            foreach ($this->defs as $key => $value) {
-                $defs[$key] = self::classSchema($value);
-            }
-        }
-
-        $definitions = null;
-        if ($this->definitions !== null) {
-            $definitions = [];
-            foreach ($this->definitions as $key => $value) {
-                $definitions[$key] = self::classSchema($value);
-            }
-        }
-
-        return ['type' => $this->type]
+        return ($this->type !== null ? ['type' => $this->type->value] : [])
             + ($this->id !== null ? ['$id' => $this->id] : [])
             + ($this->anchor !== null ? ['$anchor' => $this->anchor] : [])
-            + ($this->ref !== null ? ['$ref' => self::classSchema($this->ref)] : null)
-            + ($defs !== null ? ['$defs' => $defs] : [])
-            + ($definitions !== null ? ['definitions' => $definitions] : [])
+            + ($this->ref !== null ? ['$ref' => '#/definitions/' . $this->ref] : [])
+            + ($this->defs !== null ? ['$defs' => $this->defs] : [])
+            + ($this->definitions !== null ? ['definitions' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->definitions)] : [])
             + ($this->title !== null ? ['title' => $this->title] : [])
             + ($this->description !== null ? ['description' => $this->description] : [])
             + ($this->default !== null ? ['default' => $this->default] : [])
@@ -175,7 +203,7 @@ class ArraySchema extends Schema
         mixed $const = null,
         ?array $enum = null,
 
-        public Schema | bool | null $items = null,
+        public Schema | null $items = null,
         /** @var Schema[] */
         public ?array $prefixItems = null,
         public ?Schema $contains = null,
@@ -200,6 +228,17 @@ class ArraySchema extends Schema
             enum: $enum,
         );
     }
+
+    public function jsonSerialize(): mixed
+    {
+        return parent::jsonSerialize()
+            + ($this->items !== null ? ['items' => $this->items->jsonSerialize()] : [])
+            + ($this->prefixItems !== null ? ['prefixItems' => $this->prefixItems] : [])
+            + ($this->contains !== null ? ['contains' => $this->contains->jsonSerialize()] : [])
+            + ($this->minContains !== null ? ['minContains' => $this->minContains] : [])
+            + ($this->maxContains !== null ? ['maxContains' => $this->maxContains] : [])
+            + ($this->uniqueItems !== null ? ['uniqueItems' => $this->uniqueItems] : []);
+    }
 }
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
@@ -220,7 +259,7 @@ class NumberSchema extends Schema
         mixed $const = null,
         ?array $enum = null,
 
-        public bool $integer,
+        public bool $integer = false,
         public int | float | null $multipleOf = null,
         public int | float | null $minimum = null,
         public int | float | null $maximum = null,
@@ -228,7 +267,7 @@ class NumberSchema extends Schema
         public int | float | null $exclusiveMaximum = null,
     ) {
         parent::__construct(
-            type: SchemaType::Number,
+            type: $integer ? SchemaType::Integer : SchemaType::Number,
             id: $id,
             anchor: $anchor,
             ref: $ref,
@@ -243,6 +282,16 @@ class NumberSchema extends Schema
             const: $const,
             enum: $enum,
         );
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return parent::jsonSerialize()
+            + ($this->multipleOf !== null ? ['multipleOf' => $this->multipleOf] : [])
+            + ($this->minimum !== null ? ['minimum' => $this->minimum] : [])
+            + ($this->maximum !== null ? ['maximum' => $this->maximum] : [])
+            + ($this->exclusiveMinimum !== null ? ['exclusiveMinimum' => $this->exclusiveMinimum] : [])
+            + ($this->exclusiveMaximum !== null ? ['exclusiveMaximum' => $this->exclusiveMaximum] : []);
     }
 }
 
@@ -388,6 +437,17 @@ class StringSchema extends Schema
             enum: $enum,
         );
     }
+
+    public function jsonSerialize(): mixed
+    {
+        return parent::jsonSerialize()
+            + ($this->format !== null ? ['format' => $this->format->value] : [])
+            + ($this->minLength !== null ? ['minLength' => $this->minLength] : [])
+            + ($this->maxLength !== null ? ['maxLength' => $this->maxLength] : [])
+            + ($this->pattern !== null ? ['pattern' => $this->pattern] : [])
+            + ($this->contentType !== null ? ['contentType' => $this->contentType] : [])
+            + ($this->contentMediaType !== null ? ['contentMediaType' => $this->contentMediaType] : []);
+    }
 }
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]
@@ -408,6 +468,7 @@ class ObjectSchema extends Schema
         mixed $const = null,
         ?array $enum = null,
 
+        /** @var Schema[]|null */
         public ?array $properties = null,
         public ?array $patternProperties = null,
         public Schema | bool | null $additionalProperties = null,
@@ -439,5 +500,46 @@ class ObjectSchema extends Schema
             const: $const,
             enum: $enum,
         );
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        $properties = null;
+        if ($this->properties !== null) {
+            foreach ($this->properties as $name => $property) {
+                $properties[$name] = $property->jsonSerialize();
+            }
+        }
+
+        $patternProperties = null;
+        if ($this->patternProperties !== null) {
+            foreach ($this->patternProperties as $name => $property) {
+                $patternProperties[$name] = $property->jsonSerialize();
+            }
+        }
+
+        return parent::jsonSerialize()
+            + ($properties !== null ? ['properties' => $properties] : [])
+            + ($patternProperties !== null ? ['pattern$patternProperties' => $patternProperties] : [])
+            + ($this->additionalProperties !== null ?
+                [
+                    'additionalProperties' => $this->additionalProperties instanceof Schema ?
+                        $this->additionalProperties->jsonSerialize()
+                        : $this->additionalProperties
+                ] : [])
+            + ($this->unevaluatedProperties !== null ?
+                [
+                    'unevaluatedProperties' => $this->unevaluatedProperties instanceof Schema ?
+                        $this->unevaluatedProperties->jsonSerialize()
+                        : $this->unevaluatedProperties
+                ] : [])
+            + ($this->requiredProperties !== null ? ['requiredProperties' => $this->requiredProperties] : [])
+            + ($this->propertyNames !== null ? ['propertyNames' => $this->propertyNames] : [])
+            + ($this->minProperties !== null ? ['minProperties' => $this->minProperties] : [])
+            + ($this->maxProperties !== null ? ['maxProperties' => $this->maxProperties] : [])
+            + ($this->allOf !== null ? ['allOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->allOf)] : [])
+            + ($this->oneOf !== null ? ['oneOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->oneOf)] : [])
+            + ($this->anyOf !== null ? ['anyOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->anyOf)] : [])
+            + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : []);
     }
 }
