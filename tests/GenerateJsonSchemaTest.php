@@ -44,6 +44,8 @@ final class GenerateJsonSchemaTest extends TestCase
 {
     public function testBasicSchema(): void
     {
+
+        echo json_encode(Schema::classSchema(Hero::class), JSON_PRETTY_PRINT);
         $this->assertEquals(
             [
                 'type' => 'object',
