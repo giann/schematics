@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-#[Schema(type: SchemaType::Object, description: 'A person')]
+#[ObjectSchema(description: 'A person', additionalProperties: false)]
 class Person
 {
     #[StringSchema(description: 'Person id', format: StringFormat::Uuid)]
@@ -18,4 +18,10 @@ class Person
     // Here we could infer $ref
     #[Schema(ref: Person::class)]
     public Person $father;
+}
+
+// Infer $allOf Person
+#[ObjectSchema(allOf: new ObjectSchema(ref: Person::class))]
+class Hero extends Person
+{
 }
