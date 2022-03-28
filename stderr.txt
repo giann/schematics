@@ -1,0 +1,30 @@
+PHPUnit 9.5.19 [44m#StandWith[0m[43mUkraine[0m
+
+Runtime:       PHP 8.1.0-dev
+
+EF                                                                  2 / 2 (100%){}
+
+Time: 00:00.007, Memory: 4.00 MB
+
+There was 1 error:
+
+1) GenerateJsonSchemaTest::testBasicSchema
+Undefined property: ReflectionEnumBackedCase::$value
+
+/Users/giann/git/brs/schematics/src/Schema.php:347
+/Users/giann/git/brs/schematics/src/Schema.php:347
+/Users/giann/git/brs/schematics/src/Schema.php:848
+/Users/giann/git/brs/schematics/src/Schema.php:1087
+/Users/giann/git/brs/schematics/tests/GenerateJsonSchemaTest.php:128
+
+--
+
+There was 1 failure:
+
+1) GenerateJsonSchemaTest::testBasicValidation
+Failed asserting that false is true.
+
+/Users/giann/git/brs/schematics/tests/GenerateJsonSchemaTest.php:149
+
+ERRORS!
+Tests: 2, Assertions: 1, Errors: 1, Failures: 1.

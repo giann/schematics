@@ -104,3 +104,19 @@ Results in the following JSON Schema:
   ]
 }
 ```
+
+## Not yet implemented
+
+- string format `7bit`
+- string format `8bit`
+- string format `binary`
+- string format `base16`
+- string format `base32`
+- [if/then/else](https://json-schema.org/understanding-json-schema/reference/conditionals.html#if-then-else)
+- [`unevaluatedProperties`](https://json-schema.org/understanding-json-schema/reference/object.html#unevaluated-properties)
+- `$ref` other than `#/definitions/<name>`
+
+## Planned
+
+- Generate schematics instances from a JSON Schema
+- Generate classes from schematics instances
