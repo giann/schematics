@@ -13,7 +13,6 @@ use ReflectionNamedType;
 use ReflectionUnionType;
 use ReflectionIntersectionType;
 use Exception;
-use ReflectionClassConstant;
 use ReflectionEnum;
 use ReflectionEnumBackedCase;
 use ReflectionEnumPureCase;
@@ -48,7 +47,52 @@ class Schema implements JsonSerializable
         public ?bool $writeOnly = null,
         public mixed $const = null,
         public ?array $enum = null,
+        ?string $enumPattern = null,
     ) {
+        if ($this->enum === null && $enumPattern !== null) {
+            $this->enum = self::patternToEnum($enumPattern);
+        }
+    }
+
+    private static function patternToEnum(string $constantPattern): ?array
+    {
+        if (strpos($constantPattern, '::')) {
+            list($cls, $constantPattern) = explode("::", $constantPattern);
+            try {
+                $refl = new ReflectionClass($cls);
+                $constants = $refl->getConstants();
+            } catch (ReflectionException $e) {
+                return null;
+            }
+        } else {
+            $constants = get_defined_constants();
+        }
+
+        $values = [];
+
+        foreach ($constants as $name => $val) {
+            if (fnmatch($constantPattern, $name)) {
+                $values[] = $val;
+            }
+        }
+
+        /*
+            Ensure there is no duplicate values in enums
+         */
+        if (count(array_unique($values)) !== count($values)) {
+            $duplicatedKeys = array_keys(
+                array_filter(
+                    array_count_values($values),
+                    static function ($value): bool {
+                        return $value > 1;
+                    }
+                )
+            );
+
+            throw new InvalidArgumentException('Invalid duplicate values for enum ' . $constantPattern . ' for items : ' . implode(', ', $duplicatedKeys));
+        }
+
+        return $values;
     }
 
     public static function classSchema(string $class, ?Schema $root = null): Schema | string
@@ -241,6 +285,7 @@ class ArraySchema extends Schema
         ?bool $writeOnly = null,
         mixed $const = null,
         ?array $enum = null,
+        ?string $enumPattern = null,
 
         public Schema | null $items = null,
         /** @var Schema[] */
@@ -265,6 +310,7 @@ class ArraySchema extends Schema
             writeOnly: $writeOnly,
             const: $const,
             enum: $enum,
+            enumPattern: $enumPattern,
         );
     }
 
@@ -297,6 +343,7 @@ class NumberSchema extends Schema
         ?bool $writeOnly = null,
         mixed $const = null,
         ?array $enum = null,
+        ?string $enumPattern = null,
 
         public bool $integer = false,
         public int | float | null $multipleOf = null,
@@ -320,6 +367,7 @@ class NumberSchema extends Schema
             writeOnly: $writeOnly,
             const: $const,
             enum: $enum,
+            enumPattern: $enumPattern,
         );
     }
 
@@ -352,6 +400,7 @@ class BooleanSchema extends Schema
         ?bool $writeOnly = null,
         mixed $const = null,
         ?array $enum = null,
+        ?string $enumPattern = null,
     ) {
         parent::__construct(
             type: SchemaType::Boolean,
@@ -368,6 +417,7 @@ class BooleanSchema extends Schema
             writeOnly: $writeOnly,
             const: $const,
             enum: $enum,
+            enumPattern: $enumPattern,
         );
     }
 }
@@ -389,6 +439,7 @@ class NullSchema extends Schema
         ?bool $writeOnly = null,
         mixed $const = null,
         ?array $enum = null,
+        ?string $enumPattern = null,
     ) {
         parent::__construct(
             type: SchemaType::Null,
@@ -405,6 +456,7 @@ class NullSchema extends Schema
             writeOnly: $writeOnly,
             const: $const,
             enum: $enum,
+            enumPattern: $enumPattern,
         );
     }
 }
@@ -450,6 +502,7 @@ class StringSchema extends Schema
         ?bool $writeOnly = null,
         mixed $const = null,
         ?array $enum = null,
+        ?string $enumPattern = null,
 
         public ?StringFormat $format = null,
         public ?int $minLength = null,
@@ -474,6 +527,7 @@ class StringSchema extends Schema
             writeOnly: $writeOnly,
             const: $const,
             enum: $enum,
+            enumPattern: $enumPattern,
         );
     }
 
@@ -506,6 +560,7 @@ class ObjectSchema extends Schema
         ?bool $writeOnly = null,
         mixed $const = null,
         ?array $enum = null,
+        ?string $enumPattern = null,
 
         /** @var Schema[]|null */
         public ?array $properties = null,
@@ -538,6 +593,7 @@ class ObjectSchema extends Schema
             writeOnly: $writeOnly,
             const: $const,
             enum: $enum,
+            enumPattern: $enumPattern,
         );
     }
 

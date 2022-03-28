@@ -20,6 +20,10 @@ enum Power: string
 #[ObjectSchema]
 class Person
 {
+    const SEX_MALE = 'male';
+    const SEX_FEMALE = 'female';
+    const SEX_OTHER = 'other';
+
     public function __construct(
         #[StringSchema(format: StringFormat::Uuid)]
         public string $id,
@@ -32,6 +36,10 @@ class Person
 
         // Infered $ref to self
         public Person $father,
+
+        // Enum from constants
+        #[StringSchema(enumPattern: 'Person::SEX_*')]
+        public string $sex,
     ) {
     }
 }
@@ -98,6 +106,14 @@ final class GenerateJsonSchemaTest extends TestCase
                             ],
                             'father' => [
                                 '$ref' => '#/definitions/Person'
+                            ],
+                            'sex' => [
+                                'type' => 'string',
+                                'enum' => [
+                                    'male',
+                                    'female',
+                                    'other'
+                                ]
                             ]
                         ]
                     ]

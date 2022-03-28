@@ -5,9 +5,20 @@
 ## Example
 
 ```php
+enum Power: string
+{
+    case fly = 'weeeee!';
+    case strong = 'smash!';
+    case psychic = 'hummmm!';
+}
+
 #[ObjectSchema]
 class Person
 {
+    const SEX_MALE = 'male';
+    const SEX_FEMALE = 'female';
+    const SEX_OTHER = 'other';
+
     public function __construct(
         #[StringSchema(format: StringFormat::Uuid)]
         public string $id,
@@ -20,6 +31,10 @@ class Person
 
         // Infered $ref to self
         public Person $father,
+
+        // Enum from constants
+        #[StringSchema(enumPattern: 'Person::SEX_*')]
+        public string $sex,
     ) {
     }
 }
@@ -30,7 +45,9 @@ class Hero extends Person
 {
     public function __construct(
         // Infers string property
-        public string $superName
+        public string $superName,
+        // Infers enum
+        public Power $power,
     ) {
     }
 }
@@ -62,6 +79,10 @@ Results in the following JSON Schema:
         },
         "father": {
           "$ref": "#/definitions/Person"
+        },
+        "sex": {
+          "type": "string",
+          "enum": ["male", "female", "other"]
         }
       }
     }
@@ -69,6 +90,10 @@ Results in the following JSON Schema:
   "properties": {
     "superName": {
       "type": "string"
+    },
+    "power": {
+      "type": "string",
+      "enum": ["weeeee!", "smash!", "hummmm!"]
     }
   },
   "additionalProperties": false,
