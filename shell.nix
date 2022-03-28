@@ -8,6 +8,7 @@ pkgs.mkShell {
     pkgs.php81Packages.psysh
     pkgs.php81Packages.composer
     pkgs.symfony-cli
+    pkgs.php81Packages.psysh
   ];
 }
 

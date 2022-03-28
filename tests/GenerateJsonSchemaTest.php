@@ -10,6 +10,13 @@ use Giann\Schematics\Schema;
 use Giann\Schematics\StringFormat;
 use Giann\Schematics\StringSchema;
 
+enum Power: string
+{
+    case fly = 'weeeee!';
+    case strong = 'smash!';
+    case psychic = 'hummmm!';
+}
+
 #[ObjectSchema]
 class Person
 {
@@ -35,7 +42,9 @@ class Hero extends Person
 {
     public function __construct(
         // Infers string property
-        public string $superName
+        public string $superName,
+        // Infers enum
+        public Power $power,
     ) {
     }
 }
@@ -52,6 +61,14 @@ final class GenerateJsonSchemaTest extends TestCase
                 'properties' => [
                     'superName' => [
                         'type' => 'string'
+                    ],
+                    'power' => [
+                        'type' => 'string',
+                        'enum' => [
+                            'weeeee!',
+                            'smash!',
+                            'hummmm!',
+                        ]
                     ]
                 ],
                 'allOf' => [

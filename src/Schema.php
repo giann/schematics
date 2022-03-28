@@ -13,6 +13,11 @@ use ReflectionNamedType;
 use ReflectionUnionType;
 use ReflectionIntersectionType;
 use Exception;
+use ReflectionClassConstant;
+use ReflectionEnum;
+use ReflectionEnumBackedCase;
+use ReflectionEnumPureCase;
+use ReflectionException;
 
 enum SchemaType: string
 {
@@ -133,16 +138,50 @@ class Schema implements JsonSerializable
                         case 'bool':
                             $propertySchema = new BooleanSchema();
                             break;
-                        default: // Is it a class?
+                        default:
+                            // Is it an enum?
                             try {
-                                // Self reference
-                                if ($type === $classReflection->getName()) {
-                                    $type = $root == $rootSchema ? '#' : $type;
-                                }
+                                $enumReflection = new ReflectionEnum($type);
 
-                                $propertySchema = new Schema(ref: $type);
-                            } catch (Exception $_) {
-                                // Discard the property
+                                // Backed enum can only be string or integer
+                                if ($enumReflection->isBacked()) {
+                                    if (gettype($enumReflection->getCases()[0]->getBackingValue()) == 'string') {
+                                        $propertySchema = new StringSchema(
+                                            enum: array_map(
+                                                fn (ReflectionEnumBackedCase $case) => $case->getBackingValue(),
+                                                $enumReflection->getCases()
+                                            )
+                                        );
+                                    } else { // int
+                                        $propertySchema = new NumberSchema(
+                                            integer: true,
+                                            enum: array_map(
+                                                fn (ReflectionEnumBackedCase $case) => $case->getBackingValue(),
+                                                $enumReflection->getCases()
+                                            )
+                                        );
+                                    }
+                                } else {
+                                    // Pure enum, we use cases names as value
+                                    $cases = array_map(
+                                        fn (ReflectionEnumPureCase $case) => $case->getName(),
+                                        $enumReflection->getCases()
+                                    );
+
+                                    $propertySchema = new StringSchema(enum: $cases);
+                                }
+                            } catch (ReflectionException $_) {
+                                // Is it a class?
+                                try {
+                                    // Self reference
+                                    if ($type === $classReflection->getName()) {
+                                        $type = $root == $rootSchema ? '#' : $type;
+                                    }
+
+                                    $propertySchema = new Schema(ref: $type);
+                                } catch (Exception $_) {
+                                    // Discard the property
+                                }
                             }
                     }
 
