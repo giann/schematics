@@ -8,59 +8,86 @@ use Giann\Schematics\InvalidSchemaValueException;
 use Giann\Schematics\NumberSchema;
 use Giann\Schematics\ObjectSchema;
 use Giann\Schematics\Schema;
-use Giann\Schematics\StringFormat;
 use Giann\Schematics\StringSchema;
 
-enum Power: string
-{
-    case fly = 'weeeee!';
-    case strong = 'smash!';
-    case psychic = 'hummmm!';
-}
-
-#[ObjectSchema]
+/**
+ * @ObjectSchema
+ */
 class Person
 {
     const SEX_MALE = 'male';
     const SEX_FEMALE = 'female';
     const SEX_OTHER = 'other';
 
-    public function __construct(
-        #[StringSchema(format: StringFormat::Uuid)]
-        public string $id,
+    /**
+     * @StringSchema(format = StringSchema::FORMAT_UUID)
+     */
+    public string $id;
 
-        #[ArraySchema(items: new StringSchema(), minContains: 1)]
-        public array $names,
+    /**
+     * @ArraySchema(items = @StringSchema, minContains = 1)
+     */
+    public array $names;
 
-        #[NumberSchema(integer: true, minimum: 0)]
-        public int $age,
+    /**
+     * @NumberSchema(integer = true, minimum = 0)
+     */
+    public int $age;
 
-        // Enum from constants
-        #[StringSchema(enumPattern: 'Person::SEX_*')]
-        public string $sex,
+    // Enum from constants
+    /**
+     * @StringSchema(enumPattern = "Person::SEX_*")
+     */
+    public string $sex;
 
-        // Infered $ref to self
-        public ?Person $father = null,
-    ) {
-    }
-}
+    // Infered $ref to self
+    public ?Person $father = null;
 
-// Infer $allOf Person
-#[ObjectSchema] //additionalProperties: false)]
-class Hero extends Person
-{
     public function __construct(
         string $id,
         array $names,
         int $age,
         string $sex,
-        // Infers string property
-        public string $superName,
-        // Infers enum
-        public Power $power,
+        ?Person $father = null
+    ) {
+        $this->id = $id;
+        $this->names = $names;
+        $this->age = $age;
+        $this->sex = $sex;
+        $this->father = $father;
+    }
+}
+
+// Infer $allOf Person
+/**
+ * @ObjectSchema
+ */
+class Hero extends Person
+{
+    const POWER_FLY = 'weeeee!';
+    const POWER_STRONG = 'smash!';
+    const POWER_PSYCHIC = 'hummmm!';
+
+    // Infers string property
+    public string $superName;
+    /**
+     * @StringSchema(enumPattern = "Hero::POWER_*")
+     */
+    public string $power;
+
+    public function __construct(
+        string $id,
+        array $names,
+        int $age,
+        string $sex,
         ?Person $father = null,
+        string $superName,
+        string $power
     ) {
         parent::__construct($id, $names, $age, $sex, $father);
+
+        $this->superName = $superName;
+        $this->power = $power;
     }
 }
 
@@ -139,12 +166,13 @@ final class GenerateJsonSchemaTest extends TestCase
     {
         try {
             $thor = new Hero(
-                id: 'f554a7c7-5c33-415f-a0ca-db19be81f868',
-                names: ['Bruce Banner'],
-                age: 30,
-                sex: Person::SEX_MALE,
-                superName: 'Thor',
-                power: Power::strong,
+                'f554a7c7-5c33-415f-a0ca-db19be81f868',
+                ['Bruce Banner'],
+                30,
+                Person::SEX_MALE,
+                null,
+                'Thor',
+                Hero::POWER_STRONG
             );
 
             Schema::validateInstance($thor);
@@ -159,12 +187,13 @@ final class GenerateJsonSchemaTest extends TestCase
     {
         try {
             $thor = new Hero(
-                id: 'dumpid',
-                names: ['Bruce Banner'],
-                age: 30,
-                sex: Person::SEX_MALE,
-                superName: 'Thor',
-                power: Power::strong,
+                'dumpid',
+                ['Bruce Banner'],
+                30,
+                Person::SEX_MALE,
+                null,
+                'Thor',
+                Hero::POWER_STRONG
             );
 
             Schema::validateInstance($thor);
