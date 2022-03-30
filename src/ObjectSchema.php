@@ -154,23 +154,23 @@ class ObjectSchema extends Schema
         return $this;
     }
 
-    public function validate($value, ?Schema $root = null): void
+    public function validate($value, ?Schema $root = null, array $path = ['#']): void
     {
         if (!is_object($value)) {
-            throw new InvalidSchemaValueException("Expected object got " . gettype($value));
+            throw new InvalidSchemaValueException("Expected object got " . gettype($value), $path);
         }
 
         $root = $root ?? $this;
         $reflection = new ReflectionClass(get_class($value));
 
-        parent::validate($value, $root);
+        parent::validate($value, $root, $path);
 
         if ($this->properties !== null && count($this->properties) > 0) {
             foreach ($this->properties as $key => $schema) {
                 try {
-                    $schema->validate($reflection->getProperty($key)->getValue($value), $root);
+                    $schema->validate($reflection->getProperty($key)->getValue($value), $root, [...$path, $key]);
                 } catch (ReflectionException $_) {
-                    throw new InvalidSchemaValueException("Value has no property " . $key);
+                    throw new InvalidSchemaValueException("Value has no property " . $key, $path);
                 }
             }
         }
@@ -179,7 +179,7 @@ class ObjectSchema extends Schema
             foreach ($this->patternProperties as $pattern => $schema) {
                 foreach ($reflection->getProperties() as $property) {
                     if (preg_match($pattern, $property->getName())) {
-                        $schema->validate($property->getValue(), $root);
+                        $schema->validate($property->getValue(), $root, [...$path, $property->getName()]);
                     }
                 }
             }
@@ -189,13 +189,13 @@ class ObjectSchema extends Schema
             if (is_bool($this->additionalProperties) && !$this->additionalProperties) {
                 foreach ($reflection->getProperties() as $property) {
                     if (!isset($this->properties[$property->getName()])) {
-                        throw new InvalidSchemaValueException("Additionnal property " . $property->getName() . " is not allowed");
+                        throw new InvalidSchemaValueException("Additionnal property " . $property->getName() . " is not allowed", $path);
                     }
                 }
             } else if ($this->additionalProperties instanceof Schema) {
                 foreach ($reflection->getProperties() as $property) {
                     if (!isset($this->properties[$property->getName()])) {
-                        $this->additionalProperties->validate($property->getValue());
+                        $this->additionalProperties->validate($property->getValue(), $root, [...$path, $property->getName()]);
                     }
                 }
             }
@@ -210,23 +210,23 @@ class ObjectSchema extends Schema
                 try {
                     $reflection->getProperty($property);
                 } catch (ReflectionException $_) {
-                    throw new InvalidSchemaValueException("Property " . $property . " is required");
+                    throw new InvalidSchemaValueException("Property " . $property . " is required", $path);
                 }
             }
         }
 
         if ($this->propertyNames !== null) {
             foreach ($reflection->getProperties() as $property) {
-                $this->propertyNames->validate($property->getName(), $root);
+                $this->propertyNames->validate($property->getName(), $root, [...$path, $property->getName()]);
             }
         }
 
         if ($this->minProperties !== null && count($reflection->getProperties()) < $this->minProperties) {
-            throw new InvalidSchemaValueException("Should have at least " . $this->minProperties . " properties got " . count($reflection->getProperties()));
+            throw new InvalidSchemaValueException("Should have at least " . $this->minProperties . " properties got " . count($reflection->getProperties()), $path);
         }
 
         if ($this->maxProperties !== null && count($reflection->getProperties()) > $this->maxProperties) {
-            throw new InvalidSchemaValueException("Should have at most " . $this->maxProperties . " properties got " . count($reflection->getProperties()));
+            throw new InvalidSchemaValueException("Should have at most " . $this->maxProperties . " properties got " . count($reflection->getProperties()), $path);
         }
     }
 

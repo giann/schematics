@@ -107,38 +107,38 @@ class NumberSchema extends Schema
         $this->exclusiveMaximum = $exclusiveMaximum;
     }
 
-    public function validate($value, ?Schema $root = null): void
+    public function validate($value, ?Schema $root = null, array $path = ['#']): void
     {
         $root = $root ?? $this;
 
-        parent::validate($value, $root);
+        parent::validate($value, $root, $path);
 
         if (!is_int($value) && $this->integer) {
-            throw new InvalidSchemaValueException("Expected an integer got " . gettype($value));
+            throw new InvalidSchemaValueException("Expected an integer got " . gettype($value), $path);
         }
 
         if (!$this->integer && !is_double($value)) {
-            throw new InvalidSchemaValueException("Expected a double got " . gettype($value));
+            throw new InvalidSchemaValueException("Expected a double got " . gettype($value), $path);
         }
 
         if ($this->multipleOf !== null && $value % $this->multipleOf !== 0) {
-            throw new InvalidSchemaValueException("Expected a multiple of " . $this->multipleOf);
+            throw new InvalidSchemaValueException("Expected a multiple of " . $this->multipleOf, $path);
         }
 
         if ($this->minimum !== null && $value < $this->minimum) {
-            throw new InvalidSchemaValueException("Expected value to be less or equal to " . $this->minimum);
+            throw new InvalidSchemaValueException("Expected value to be less or equal to " . $this->minimum, $path);
         }
 
         if ($this->maximum !== null && $value > $this->maximum) {
-            throw new InvalidSchemaValueException("Expected value to be greater or equal to " . $this->maximum);
+            throw new InvalidSchemaValueException("Expected value to be greater or equal to " . $this->maximum, $path);
         }
 
         if ($this->exclusiveMinimum !== null && $value <= $this->exclusiveMinimum) {
-            throw new InvalidSchemaValueException("Expected value to be less than " . $this->exclusiveMinimum);
+            throw new InvalidSchemaValueException("Expected value to be less than " . $this->exclusiveMinimum, $path);
         }
 
         if ($this->exclusiveMaximum !== null && $value >= $this->exclusiveMaximum) {
-            throw new InvalidSchemaValueException("Expected value to be greather than " . $this->exclusiveMaximum);
+            throw new InvalidSchemaValueException("Expected value to be greather than " . $this->exclusiveMaximum, $path);
         }
     }
 

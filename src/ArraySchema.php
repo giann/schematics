@@ -123,25 +123,25 @@ class ArraySchema extends Schema
         return $this;
     }
 
-    public function validate($value, ?Schema $root = null): void
+    public function validate($value, ?Schema $root = null, array $path = ['#']): void
     {
         $root = $root ?? $this;
 
-        parent::validate($value, $root);
+        parent::validate($value, $root, $path);
 
         if ($this->minContains !== null && count($value) < $this->minContains) {
-            throw new InvalidSchemaValueException("Expected at least ' . $this->minContains . ' elements got " . count($value));
+            throw new InvalidSchemaValueException("Expected at least ' . $this->minContains . ' elements got " . count($value), $path);
         }
 
         if ($this->maxContains !== null && count($value) > $this->maxContains) {
-            throw new InvalidSchemaValueException("Expected at most ' . $this->maxContains . ' elements got " . count($value));
+            throw new InvalidSchemaValueException("Expected at most ' . $this->maxContains . ' elements got " . count($value), $path);
         }
 
         if ($this->uniqueItems === true) {
             $items = [];
             foreach ($value as $item) {
                 if (in_array($item, $items)) {
-                    throw new InvalidSchemaValueException('Expected unique items');
+                    throw new InvalidSchemaValueException('Expected unique items', $path);
                 }
 
                 $items[] = $item;
@@ -150,15 +150,15 @@ class ArraySchema extends Schema
 
         if ($this->prefixItems !== null && count($this->prefixItems) > 0) {
             foreach ($this->prefixItems as $i => $prefixItem) {
-                $prefixItem->validate($value[$i], $root);
+                $prefixItem->validate($value[$i], $root, [...$path, 'prefixItems', $i]);
             }
         }
 
         if ($this->contains !== null) {
             $contains = false;
-            foreach ($value as $item) {
+            foreach ($value as $i => $item) {
                 try {
-                    $this->contains->validate($item, $root);
+                    $this->contains->validate($item, $root, [...$path, 'contains', $i]);
 
                     $contains = true;
 
@@ -168,7 +168,7 @@ class ArraySchema extends Schema
             }
 
             if (!$contains) {
-                throw new InvalidSchemaValueException('Expected at least one item to validate against ' . $this->contains);
+                throw new InvalidSchemaValueException('Expected at least one item to validate against ' . $this->contains, $path);
             }
         }
     }

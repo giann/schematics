@@ -107,25 +107,25 @@ class StringSchema extends Schema
         }
     }
 
-    public function validate($value, ?Schema $root = null): void
+    public function validate($value, ?Schema $root = null, array $path = ['#']): void
     {
         $root = $root ?? $this;
 
-        parent::validate($value, $root);
+        parent::validate($value, $root, $path);
 
         if ($this->maxLength !== null && strlen($value) > $this->maxLength) {
-            throw new InvalidSchemaValueException('Expected at most ' . $this->maxLength . ' characters long, got ' . strlen($value));
+            throw new InvalidSchemaValueException('Expected at most ' . $this->maxLength . ' characters long, got ' . strlen($value), $path);
         }
 
         if ($this->minLength !== null && strlen($value) < $this->minLength) {
-            throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . strlen($value));
+            throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . strlen($value), $path);
         }
 
         // Add regex delimiters /.../ if missing
         if ($this->pattern !== null) {
             $pattern = preg_match('/\/[^\/]+\//', $this->pattern) === 1 ? '/' . $this->pattern . '/' : $this->pattern;
             if (preg_match($pattern, $value) !== 1) {
-                throw new InvalidSchemaValueException('Expected value to match ' . $this->pattern);
+                throw new InvalidSchemaValueException('Expected value to match ' . $this->pattern, $path);
             }
         }
 
@@ -163,7 +163,7 @@ class StringSchema extends Schema
             unlink($tmpfile);
 
             if ($mimeType !== false && $mimeType !== $this->contentMediaType) {
-                throw new InvalidSchemaValueException('Expected content mime type to be ' . $this->contentMediaType . ' got ' . $mimeType);
+                throw new InvalidSchemaValueException('Expected content mime type to be ' . $this->contentMediaType . ' got ' . $mimeType, $path);
             }
         }
 
@@ -171,49 +171,49 @@ class StringSchema extends Schema
             switch ($this->format) {
                 case self::FORMAT_DATETIME:
                     if (!preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+\d\d:\d+$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be date-time');
+                        throw new InvalidSchemaValueException('Expected to be date-time', $path);
                     }
                     break;
                 case self::FORMAT_TIME:
                     if (!preg_match('/^\d\d:\d\d:\d\d\+\d\d:\d+$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be time');
+                        throw new InvalidSchemaValueException('Expected to be time', $path);
                     }
                     break;
                 case self::FORMAT_DATE:
                     if (!preg_match('/^\d{4}-\d\d-\d\d$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be date');
+                        throw new InvalidSchemaValueException('Expected to be date', $path);
                     }
                     break;
                 case self::FORMAT_DURATION:
                     if (!preg_match(self::DURATION_REGEX, $value)) {
-                        throw new InvalidSchemaValueException('Expected to be duration');
+                        throw new InvalidSchemaValueException('Expected to be duration', $path);
                     }
                     break;
                 case self::FORMAT_EMAIL:
                 case self::FORMAT_IDNEMAIL:
                     if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                        throw new InvalidSchemaValueException('Expected to be email');
+                        throw new InvalidSchemaValueException('Expected to be email', $path);
                     }
                     break;
                 case self::FORMAT_HOSTNAME:
                 case self::FORMAT_IDNHOSTNAME:
                     if (!filter_var($value, FILTER_VALIDATE_DOMAIN)) {
-                        throw new InvalidSchemaValueException('Expected to be hostname');
+                        throw new InvalidSchemaValueException('Expected to be hostname', $path);
                     }
                     break;
                 case self::FORMAT_IPV4:
                     if (!preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be ipv4');
+                        throw new InvalidSchemaValueException('Expected to be ipv4', $path);
                     }
                     break;
                 case self::FORMAT_IPV6:
                     if (!preg_match('/^[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be ipv6');
+                        throw new InvalidSchemaValueException('Expected to be ipv6', $path);
                     }
                     break;
                 case self::FORMAT_UUID:
                     if (!preg_match('/^[a-f0-9]{8}\-[a-f0-9]{4}\-4[a-f0-9]{3}\-(8|9|a|b)[a-f0-9]{3}\-[a-f0-9]{12}$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be uuid');
+                        throw new InvalidSchemaValueException('Expected to be uuid', $path);
                     }
                     break;
                 case self::FORMAT_URI:
@@ -221,23 +221,23 @@ class StringSchema extends Schema
                 case self::FORMAT_IRI:
                 case self::FORMAT_IRIREFERENCE:
                     if (!filter_var($value, FILTER_VALIDATE_URL)) {
-                        throw new InvalidSchemaValueException('Expected to be uri');
+                        throw new InvalidSchemaValueException('Expected to be uri', $path);
                     }
                     break;
                 case self::FORMAT_URITEMPLATE:
                     if (!preg_match('/^$/', $value)) {
-                        throw new InvalidSchemaValueException('uri-template');
+                        throw new InvalidSchemaValueException('uri-template', $path);
                     }
                     break;
                 case self::FORMAT_JSONPOINTER:
                 case self::FORMAT_RELATIVEJSONPOINTER:
                     if (!preg_match('/^\/?([^\/]+\/)*[^\/]+$/', $value)) {
-                        throw new InvalidSchemaValueException('json-pointer');
+                        throw new InvalidSchemaValueException('json-pointer', $path);
                     }
                     break;
                 case self::FORMAT_REGEX:
                     if (!filter_var($value, FILTER_VALIDATE_REGEXP)) {
-                        throw new InvalidSchemaValueException('Expected to be email');
+                        throw new InvalidSchemaValueException('Expected to be email', $path);
                     }
                     break;
             }

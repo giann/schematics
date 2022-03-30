@@ -202,7 +202,7 @@ final class GenerateJsonSchemaTest extends TestCase
 
             $this->assertTrue(false);
         } catch (InvalidSchemaValueException $e) {
-            $this->assertEquals('Expected to be uuid', $e->getMessage());
+            $this->assertEquals('Expected to be uuid at #/allOf/0/#/definitions/Person/id', $e->getMessage());
         }
     }
 }

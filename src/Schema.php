@@ -15,10 +15,16 @@ use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\Annotation;
 use Doctrine\Common\Annotations\Annotation\NamedArgumentConstructor;
 use Doctrine\Common\Annotations\Annotation\Target;
-
+use Throwable;
 
 class InvalidSchemaValueException extends Exception
 {
+    public function __construct(string $message = "", array $path, int $code = 0, ?Throwable $previous = null)
+    {
+        $message = $message . ' at ' . implode("/", $path);
+
+        parent::__construct($message, $code, $previous);
+    }
 }
 
 class NotYetImplementedException extends BadMethodCallException
@@ -201,7 +207,7 @@ class Schema implements JsonSerializable
         return $value;
     }
 
-    public function validate($value, ?Schema $root = null): void
+    public function validate($value, ?Schema $root = null, array $path = ['#']): void
     {
         $root = $root ?? $this;
 
@@ -215,30 +221,30 @@ class Schema implements JsonSerializable
             }
 
             if ($match) {
-                throw new InvalidSchemaValueException("Expected type to be one of " . implode(",", $this->type) . ", got " . gettype($value));
+                throw new InvalidSchemaValueException("Expected type to be one of " . implode(",", $this->type) . ", got " . gettype($value), $path);
             }
         } else if ($this->type !== null && self::typeCorrespondance[$this->type] !== gettype($value)) {
             if ($this->enum !== null) {
                 if (!in_array($value, $this->enum)) {
-                    throw new InvalidSchemaValueException("Expected type " . self::typeCorrespondance[$this->type] . " got " . gettype($value));
+                    throw new InvalidSchemaValueException("Expected type " . self::typeCorrespondance[$this->type] . " got " . gettype($value), $path);
                 }
             } else {
-                throw new InvalidSchemaValueException("Expected type " . self::typeCorrespondance[$this->type] . " got " . gettype($value));
+                throw new InvalidSchemaValueException("Expected type " . self::typeCorrespondance[$this->type] . " got " . gettype($value), $path);
             }
         }
 
         if ($this->enum !== null && !in_array($value instanceof JsonSerializable ? $value->jsonSerialize() : $value, $this->enum, true)) {
-            throw new InvalidSchemaValueException("Expected value from enum");
+            throw new InvalidSchemaValueException("Expected value from enum", $path);
         }
 
         if ($this->resolvedRef != null) {
             // Root reference
             if ($this->ref === '#' && $root !== null && $root !== $this) {
-                $root->validate($value, $root);
+                $root->validate($value, $root, $path);
             } else {
-                $path = explode('#', $this->resolvedRef);
-                $basePath = explode('/', $path[0]);
-                $fragment = count($path) > 1 ? explode('/', $path[1]) : [];
+                $refPath = explode('#', $this->resolvedRef);
+                $basePath = explode('/', $refPath[0]);
+                $fragment = count($refPath) > 1 ? explode('/', $refPath[1]) : [];
 
                 if (
                     count($basePath) === 1 && $basePath[0] === ''
@@ -247,7 +253,7 @@ class Schema implements JsonSerializable
                     if (isset($root->definitions[$fragment[2]])) {
                         $ref = $root->definitions[$fragment[2]];
 
-                        $ref->validate($value, $root);
+                        $ref->validate($value, $root, [...$path, $this->resolvedRef]);
                     } else {
                         throw new InvalidArgumentException('Can\'t resolve $ref ' . $this->resolvedRef ?? $this->ref);
                     }
@@ -257,15 +263,15 @@ class Schema implements JsonSerializable
             }
         }
 
-        foreach ($this->allOf ?? [] as $schema) {
-            $schema->validate($value, $root);
+        foreach ($this->allOf ?? [] as $i => $schema) {
+            $schema->validate($value, $root, [...$path, 'allOf', $i]);
         }
 
         if ($this->oneOf !== null && count($this->oneOf) > 0) {
             $oneOf = 0;
-            foreach ($this->oneOf as $schema) {
+            foreach ($this->oneOf as $i => $schema) {
                 try {
-                    $schema->validate($value, $root);
+                    $schema->validate($value, $root, [...$path, 'oneOf', $i]);
                     $oneOf++;
 
                     if ($oneOf > 1) {
@@ -276,15 +282,15 @@ class Schema implements JsonSerializable
             }
 
             if ($oneOf > 1 || $oneOf == 0) {
-                throw new InvalidSchemaValueException("Should validate against one of " . json_encode($this->oneOf));
+                throw new InvalidSchemaValueException("Should validate against one of " . json_encode($this->oneOf), $path);
             }
         }
 
         if ($this->anyOf !== null && count($this->anyOf) > 0) {
             $anyOf = false;
-            foreach ($this->anyOf as $schema) {
+            foreach ($this->anyOf as $i => $schema) {
                 try {
-                    $schema->validate($value, $root);
+                    $schema->validate($value, $root, [...$path, 'anyOf', $i]);
                     $anyOf = true;
 
                     break;
@@ -293,15 +299,15 @@ class Schema implements JsonSerializable
             }
 
             if (!$anyOf) {
-                throw new InvalidSchemaValueException("Should validate against any of " . json_encode($this->anyOf));
+                throw new InvalidSchemaValueException("Should validate against any of " . json_encode($this->anyOf), $path);
             }
         }
 
         if ($this->not !== null) {
             try {
-                $this->not->validate($value, $root);
+                $this->not->validate($value, $root, [...$path, 'not']);
 
-                throw new InvalidSchemaValueException("Can't validate against: " . json_encode($this->not));
+                throw new InvalidSchemaValueException("Can't validate against: " . json_encode($this->not), $path);
             } catch (InvalidSchemaValueException $_) {
                 // Good
             }
