@@ -8,14 +8,8 @@ use BadMethodCallException;
 use JsonSerializable;
 use ReflectionClass;
 use InvalidArgumentException;
-use ReflectionAttribute;
 use ReflectionNamedType;
-use ReflectionUnionType;
-use ReflectionIntersectionType;
 use Exception;
-use ReflectionEnum;
-use ReflectionEnumBackedCase;
-use ReflectionEnumPureCase;
 use ReflectionException;
 use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\Annotation;
@@ -52,6 +46,8 @@ class Schema implements JsonSerializable
     public ?string $id = null;
     public ?string $anchor = null;
     public ?string $ref = null;
+    // To avoid resolving the ref multiple times
+    private ?string $resolvedRef = null;
     public ?array $defs = null;
     public ?array $definitions = null;
     public ?string $title = null;
@@ -61,12 +57,45 @@ class Schema implements JsonSerializable
     public ?bool $readOnly = null;
     public ?bool $writeOnly = null;
     public $const = null;
+    /**
+     * @var string[]|null
+     */
     public ?array $enum = null;
+    /**
+     * @var Schema[]|null
+     */
     public ?array $allOf = null;
+    /**
+     * @var Schema[]|null
+     */
     public ?array $oneOf = null;
+    /**
+     * @var Schema[]|null
+     */
     public ?array $anyOf = null;
     public ?Schema $not = null;
 
+    /**
+     * @param string|array|null $type
+     * @param string|null $id
+     * @param string|null $anchor
+     * @param string|null $ref
+     * @param array|null $defs
+     * @param array|null $definitions
+     * @param string|null $title
+     * @param string|null $description
+     * @param mixed $default
+     * @param boolean|null $deprecated
+     * @param boolean|null $readOnly
+     * @param boolean|null $writeOnly
+     * @param mixed $const
+     * @param array|null $enum
+     * @param Schema[]|null $allOf
+     * @param Schema[]|null $oneOf
+     * @param Schema[]|null $anyOf
+     * @param Schema|null $not
+     * @param string|null $enumPattern
+     */
     public function __construct(
         $type = null,
         ?string $id = null,
@@ -112,6 +141,35 @@ class Schema implements JsonSerializable
         }
     }
 
+    protected function resolveRef(?Schema $root): Schema
+    {
+        $root ??= $this;
+
+        if ($this->ref !== null && $this->resolvedRef === null) {
+            $root->definitions ??= [];
+            $root->definitions[$this->ref] ??= self::classSchema($this->ref, $root)->resolveRef($root);
+            $this->resolvedRef = '#/definitions/' . $this->ref;
+        }
+
+        if ($this->not !== null) {
+            $this->not->resolveRef($root);
+        }
+
+        foreach ($this->allOf ?? [] as $schema) {
+            $schema->resolveRef($root);
+        }
+
+        foreach ($this->oneOf ?? [] as $schema) {
+            $schema->resolveRef($root);
+        }
+
+        foreach ($this->anyOf ?? [] as $schema) {
+            $schema->resolveRef($root);
+        }
+
+        return $this;
+    }
+
     // Json Schema types => PHP types
     private const typeCorrespondance = [
         'string' => 'string',
@@ -123,13 +181,15 @@ class Schema implements JsonSerializable
         'null' => 'NULL',
     ];
 
-    public static function validateInstance(object $value): void
+    public static function validateInstance(object $value): object
     {
         $schema = self::classSchema(get_class($value));
 
         assert($schema instanceof Schema);
 
         $schema->validate($value);
+
+        return $value;
     }
 
     public function validate($value, ?Schema $root = null): void
@@ -180,7 +240,6 @@ class Schema implements JsonSerializable
 
                         $ref->validate($value, $root);
                     } else {
-                        var_dump($root);
                         throw new InvalidArgumentException('Can\'t resolve $ref ' . $this->ref);
                     }
                 } else {
@@ -310,8 +369,8 @@ class Schema implements JsonSerializable
         if ($parentReflection !== false) {
             $parent = $parentReflection->getName();
 
-            $root->definitions = $root->definitions ?? [];
-            $root->definitions[$parent] ??= self::classSchema($parent, $root);
+            $root->definitions ??= [];
+            $root->definitions[$parent] ??= self::classSchema($parent, $root)->resolveRef($root);
 
             $schema->allOf = ($schema->allOf ?? [])
                 + [new Schema(null, null, null, '#/definitions/' . $parent)];
@@ -327,10 +386,11 @@ class Schema implements JsonSerializable
                 continue;
             }
 
+            /** @var Schema */
             $propertySchema = $reader->getPropertyAnnotation($property, Schema::class);
 
             if ($propertySchema !== null) {
-                $schema->properties[$property->getName()] = $propertySchema;
+                $schema->properties[$property->getName()] = $propertySchema->resolveRef($root);
             } else {
                 // Not annotated, try to infer something
                 $propertyType = $property->getType();
@@ -347,7 +407,7 @@ class Schema implements JsonSerializable
                         case 'int':
                             $propertySchema = new NumberSchema(true);
                             break;
-                        case 'float':
+                        case 'double':
                             $propertySchema = new NumberSchema(false);
                             break;
                         case 'array':
@@ -358,32 +418,40 @@ class Schema implements JsonSerializable
                             break;
                         default:
                             // Is it a class?
-                            try {
-                                // Self reference
-                                if ($type === $classReflection->getName()) {
-                                    $type = $root == $schema ? '#' : $type;
-                                }
 
-                                $propertySchema = new Schema(null, null, null, '#/definitions/' . $type);
-                            } catch (Exception $_) {
-                                // Discard the property
+                            // Is it a circular reference to root schema ?
+                            if ($type === $classReflection->getName()) {
+                                $type = $root == $schema ? '#' : $type;
                             }
+
+                            $propertySchema = (new Schema(null, null, null, $type))->resolveRef($root);
                     }
 
                     if ($propertySchema !== null) {
                         if ($propertyType->allowsNull()) {
-                            if ($propertySchema->ref !== null) {
-                                $propertySchema->oneOf = [
-                                    new Schema(self::TYPE_NULL),
-                                    new Schema(null, null, null, $propertySchema->ref)
-                                ];
-
-                                $propertySchema->type = null;
-                                $propertySchema->ref = null;
-                            } else {
-                                assert($propertySchema->type !== null);
-                                $propertySchema->type = [$propertySchema->type, self::TYPE_NULL];
-                            }
+                            $propertySchema = new Schema(
+                                // Stupid php 7.4
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                // oneOf
+                                [
+                                    new NullSchema(),
+                                    $propertySchema
+                                ]
+                            );
                         }
 
                         $schema->properties[$property->getName()] = $propertySchema;
@@ -402,7 +470,7 @@ class Schema implements JsonSerializable
         ] : [])
             + ($this->id !== null ? ['$id' => $this->id] : [])
             + ($this->anchor !== null ? ['$anchor' => $this->anchor] : [])
-            + ($this->ref !== null ? ['$ref' => $this->ref] : [])
+            + ($this->resolvedRef !== null ? ['$ref' => $this->resolvedRef] : [])
             + ($this->defs !== null ? ['$defs' => $this->defs] : [])
             + ($this->definitions !== null ? ['definitions' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->definitions)] : [])
             + ($this->title !== null ? ['title' => $this->title] : [])
@@ -436,6 +504,32 @@ class ArraySchema extends Schema
     public ?int $maxContains = null;
     public ?bool $uniqueItems = null;
 
+    /**
+     * @param string|null $title
+     * @param string|null $id
+     * @param string|null $anchor
+     * @param string|null $ref
+     * @param array|null $defs
+     * @param array|null $definitions
+     * @param string|null $description
+     * @param mixed $default
+     * @param boolean|null $deprecated
+     * @param boolean|null $readOnly
+     * @param boolean|null $writeOnly
+     * @param mixed $const
+     * @param array|null $enum
+     * @param array|null $allOf
+     * @param array|null $oneOf
+     * @param array|null $anyOf
+     * @param Schema|null $not
+     * @param string|null $enumPattern
+     * @param Schema|string|null $items
+     * @param array|null $prefixItems
+     * @param Schema|null $contains
+     * @param integer|null $minContains
+     * @param integer|null $maxContains
+     * @param boolean|null $uniqueItems
+     */
     public function __construct(
         ?string $title = null,
         ?string $id = null,
@@ -444,11 +538,11 @@ class ArraySchema extends Schema
         ?array $defs = null,
         ?array $definitions = null,
         ?string $description = null,
-        mixed $default = null,
+        $default = null,
         ?bool $deprecated = null,
         ?bool $readOnly = null,
         ?bool $writeOnly = null,
-        mixed $const = null,
+        $const = null,
         ?array $enum = null,
         ?array $allOf = null,
         ?array $oneOf = null,
@@ -456,7 +550,7 @@ class ArraySchema extends Schema
         ?Schema $not = null,
         ?string $enumPattern = null,
 
-        ?Schema $items = null,
+        $items = null,
         /** @var Schema[] */
         ?array $prefixItems = null,
         ?Schema $contains = null,
@@ -486,12 +580,31 @@ class ArraySchema extends Schema
             $enumPattern,
         );
 
-        $this->items = $items;
+        $this->items = is_string($items) ? new Schema(null, null, null, $items) : $items;
         $this->prefixItems = $prefixItems;
         $this->contains = $contains;
         $this->minContains = $minContains;
         $this->maxContains = $maxContains;
         $this->uniqueItems = $uniqueItems;
+    }
+
+    protected function resolveRef(?Schema $root): Schema
+    {
+        $root ??= $this;
+
+        parent::resolveRef($root);
+
+        if ($this->items !== null) {
+            assert($this->items instanceof Schema);
+
+            $this->items->resolveRef($root);
+        }
+
+        foreach ($this->prefixItems ?? [] as $schema) {
+            $schema->resolveRef($root);
+        }
+
+        return $this;
     }
 
     public function validate($value, ?Schema $root = null): void
@@ -565,17 +678,43 @@ class ArraySchema extends Schema
 class NumberSchema extends Schema
 {
     public bool $integer = false;
-    /** @var int|float|null  */
+    /** @var int|double|null  */
     public $multipleOf = null;
-    /** @var int|float|null  */
+    /** @var int|double|null  */
     public $minimum = null;
-    /** @var int|float|null  */
+    /** @var int|double|null  */
     public $maximum = null;
-    /** @var int|float|null  */
+    /** @var int|double|null  */
     public $exclusiveMinimum = null;
-    /** @var int|float|null  */
+    /** @var int|double|null  */
     public $exclusiveMaximum = null;
 
+    /**
+     * @param boolean $integer
+     * @param int|double|null $multipleOf
+     * @param int|double|null $minimum
+     * @param int|double|null $maximum
+     * @param int|double|null $exclusiveMinimum
+     * @param int|double|null $exclusiveMaximum
+     * @param string|null $title
+     * @param string|null $id
+     * @param string|null $anchor
+     * @param string|null $ref
+     * @param array|null $defs
+     * @param array|null $definitions
+     * @param string|null $description
+     * @param mixed $default
+     * @param boolean|null $deprecated
+     * @param boolean|null $readOnly
+     * @param boolean|null $writeOnly
+     * @param mixed $const
+     * @param array|null $enum
+     * @param array|null $allOf
+     * @param array|null $oneOf
+     * @param array|null $anyOf
+     * @param Schema|null $not
+     * @param string|null $enumPattern
+     */
     public function __construct(
         bool $integer = false,
         $multipleOf = null,
@@ -643,8 +782,8 @@ class NumberSchema extends Schema
             throw new InvalidSchemaValueException("Expected an integer got " . gettype($value));
         }
 
-        if (!$this->integer && !is_float($value)) {
-            throw new InvalidSchemaValueException("Expected a float got " . gettype($value));
+        if (!$this->integer && !is_double($value)) {
+            throw new InvalidSchemaValueException("Expected a double got " . gettype($value));
         }
 
         if ($this->multipleOf !== null && $value % $this->multipleOf !== 0) {
@@ -880,10 +1019,6 @@ class StringSchema extends Schema
         $this->contentEncoding = $contentEncoding;
         $this->contentMediaType = $contentMediaType;
 
-        if ($this->pattern !== null && !filter_var($this->pattern, FILTER_VALIDATE_REGEXP)) {
-            throw new InvalidArgumentException('pattern is not a valid regexp');
-        }
-
         if ($this->contentEncoding && !in_array($this->contentEncoding, ['7bit', '8bit', 'binary', 'quoted-printable', 'base16', 'base32', 'base64'])) {
             throw new InvalidArgumentException('contentEncoding must be 7bit, 8bit, binary, quoted-printable, base16, base32 or base64');
         }
@@ -903,7 +1038,9 @@ class StringSchema extends Schema
             throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . strlen($value));
         }
 
-        if ($this->pattern !== null && !preg_match($this->pattern, $value)) {
+        // Add regex delimiters /.../ if missing
+        $pattern = preg_match('/\/[^\/]+\//', $this->pattern) === 1 ? '/' . $this->pattern . '/' : $this->pattern;
+        if ($this->pattern !== null && preg_match($pattern, $value) !== 1) {
             throw new InvalidSchemaValueException('Expected value to match ' . $this->pattern);
         }
 
@@ -1042,7 +1179,6 @@ class StringSchema extends Schema
  */
 class ObjectSchema extends Schema
 {
-    /** @var Schema[]|null */
     public ?array $properties = null;
     public ?array $patternProperties = null;
     /** @var Schema|bool|null */
@@ -1055,6 +1191,34 @@ class ObjectSchema extends Schema
     public ?int $minProperties = null;
     public ?int $maxProperties = null;
 
+    /**
+     * @param string|null $title
+     * @param string|null $id
+     * @param string|null $anchor
+     * @param string|null $ref
+     * @param array|null $defs
+     * @param array|null $definitions
+     * @param string|null $description
+     * @param mixed $default
+     * @param boolean|null $deprecated
+     * @param boolean|null $readOnly
+     * @param boolean|null $writeOnly
+     * @param mixed $const
+     * @param array|null $enum
+     * @param array|null $allOf
+     * @param array|null $oneOf
+     * @param array|null $anyOf
+     * @param Schema|null $not
+     * @param string|null $enumPattern
+     * @param array|null $properties
+     * @param array|null $patternProperties
+     * @param Schema|bool|null $additionalProperties
+     * @param Schema|bool|null $unevaluatedProperties
+     * @param string[]|null $requiredProperties
+     * @param StringSchema|null $propertyNames
+     * @param integer|null $minProperties
+     * @param integer|null $maxProperties
+     */
     public function __construct(
         ?string $title = null,
         ?string $id = null,
@@ -1074,13 +1238,10 @@ class ObjectSchema extends Schema
         ?array $anyOf = null,
         ?Schema $not = null,
         ?string $enumPattern = null,
-
-        /** @var Schema[]|null */
         ?array $properties = null,
         ?array $patternProperties = null,
         $additionalProperties = null,
         $unevaluatedProperties = null,
-        /** @var string[] */
         ?array $requiredProperties = null,
         ?StringSchema $propertyNames = null,
         ?int $minProperties = null,
@@ -1122,10 +1283,45 @@ class ObjectSchema extends Schema
         }
     }
 
+    protected function resolveRef(?Schema $root): Schema
+    {
+        $root ??= $this;
+
+        parent::resolveRef($root);
+
+        /**
+         * @var Schema $property
+         */
+        foreach ($this->properties ?? [] as $property) {
+            $property->resolveRef($root);
+        }
+
+        /**
+         * @var Schema $property
+         */
+        foreach ($this->patternProperties ?? [] as $property) {
+            $property->resolveRef($root);
+        }
+
+        if ($this->additionalProperties instanceof Schema) {
+            $this->additionalProperties->resolveRef($root);
+        }
+
+        if ($this->unevaluatedProperties instanceof Schema) {
+            $this->unevaluatedProperties->resolveRef($root);
+        }
+
+        if ($this->propertyNames !== null) {
+            $this->propertyNames->resolveRef($root);
+        }
+
+        return $this;
+    }
+
     public function validate($value, ?Schema $root = null): void
     {
         if (!is_object($value)) {
-            throw new InvalidSchemaValueException("Expected object");
+            throw new InvalidSchemaValueException("Expected object got " . gettype($value));
         }
 
         $root = $root ?? $this;
