@@ -9,6 +9,7 @@ use Giann\Schematics\NumberSchema;
 use Giann\Schematics\ObjectSchema;
 use Giann\Schematics\Schema;
 use Giann\Schematics\StringSchema;
+use Giann\Schematics\SchemaDescription;
 
 /**
  * @ObjectSchema
@@ -21,6 +22,7 @@ class Person
 
     /**
      * @StringSchema(format = StringSchema::FORMAT_UUID)
+     * @SchemaDescription("unique id of the person")
      */
     public string $id;
 
@@ -116,14 +118,14 @@ final class GenerateJsonSchemaTest extends TestCase
                         '$ref' => '#/definitions/Person'
                     ]
                 ],
-                // 'additionalProperties' => false,
                 'definitions' => [
                     'Person' => [
                         'type' => 'object',
                         'properties' => [
                             'id' => [
                                 'type' => 'string',
-                                'format' => 'uuid'
+                                'format' => 'uuid',
+                                'description' => 'unique id of the person'
                             ],
                             'names' => [
                                 'type' => 'array',
