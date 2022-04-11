@@ -123,9 +123,9 @@ class StringSchema extends Schema
 
         // Add regex delimiters /.../ if missing
         if ($this->pattern !== null) {
-            $pattern = preg_match('/\/[^\/]+\//', $this->pattern) === 1 ? '/' . $this->pattern . '/' : $this->pattern;
+            $pattern = preg_match('/\/[^\/]+\//', $this->pattern) === 0 ? '/' . $this->pattern . '/' : $this->pattern;
             if (preg_match($pattern, $value) !== 1) {
-                throw new InvalidSchemaValueException('Expected value to match ' . $this->pattern, $path);
+                throw new InvalidSchemaValueException('Expected value to match ' . $this->pattern . ' got `' . $value . '`', $path);
             }
         }
 
