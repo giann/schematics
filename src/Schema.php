@@ -234,7 +234,7 @@ class Schema implements JsonSerializable
         }
 
         if ($this->enum !== null && !in_array($value instanceof JsonSerializable ? $value->jsonSerialize() : $value, $this->enum, true)) {
-            throw new InvalidSchemaValueException("Expected value from enum", $path);
+            throw new InvalidSchemaValueException("Expected value within [" . implode(', ', $this->enum) . '] got `' . $value . '`', $path);
         }
 
         if ($this->resolvedRef != null) {
@@ -269,35 +269,51 @@ class Schema implements JsonSerializable
 
         if ($this->oneOf !== null && count($this->oneOf) > 0) {
             $oneOf = 0;
+            $exceptions = [];
             foreach ($this->oneOf as $i => $schema) {
                 try {
                     $schema->validate($value, $root, [...$path, 'oneOf', $i]);
                     $oneOf++;
 
                     break;
-                } catch (InvalidSchemaValueException $_) {
+                } catch (InvalidSchemaValueException $e) {
+                    $exceptions[] = $e;
                 }
             }
 
             if ($oneOf > 1 || $oneOf == 0) {
-                throw new InvalidSchemaValueException("Should validate against one of " . json_encode($this->oneOf), $path);
+                throw new InvalidSchemaValueException(
+                    "Should validate against one of\n"
+                        . json_encode($this->oneOf, JSON_PRETTY_PRINT)
+                        . "\nbut fails with:\n\t- "
+                        . implode("\n\t- ", array_map(fn ($e) => $e->getMessage(), $exceptions)),
+                    $path
+                );
             }
         }
 
         if ($this->anyOf !== null && count($this->anyOf) > 0) {
             $anyOf = false;
+            $exceptions = [];
             foreach ($this->anyOf as $i => $schema) {
                 try {
                     $schema->validate($value, $root, [...$path, 'anyOf', $i]);
                     $anyOf = true;
 
                     break;
-                } catch (InvalidSchemaValueException $_) {
+                } catch (InvalidSchemaValueException $e) {
+                    $exceptions[] = $e;
                 }
             }
 
             if (!$anyOf) {
-                throw new InvalidSchemaValueException("Should validate against any of " . json_encode($this->anyOf), $path);
+                throw new InvalidSchemaValueException(
+                    "Should validate against any of\n"
+                        . json_encode($this->anyOf, JSON_PRETTY_PRINT)
+                        . "\nbut fails with:\n\t- "
+                        . implode("\n\t- ", array_map(fn ($e) => $e->getMessage(), $exceptions)),
+                    $path
+                );
             }
         }
 
