@@ -171,6 +171,12 @@ class ArraySchema extends Schema
                 throw new InvalidSchemaValueException('Expected at least one item to validate against ' . $this->contains, $path);
             }
         }
+
+        if ($this->items !== null) {
+            foreach ($value as $i => $item) {
+                $this->items->validate($item, $root, [...$path, 'items', $i]);
+            }
+        }
     }
 
     public function jsonSerialize(): array
