@@ -171,76 +171,91 @@ class StringSchema extends Schema
             switch ($this->format) {
                 case self::FORMAT_DATETIME:
                     if (!preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+\d\d:\d+$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be date-time', $path);
+                        throw new InvalidSchemaValueException('Expected to be date-time got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_TIME:
                     if (!preg_match('/^\d\d:\d\d:\d\d\+\d\d:\d+$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be time', $path);
+                        throw new InvalidSchemaValueException('Expected to be time got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_DATE:
                     if (!preg_match('/^\d{4}-\d\d-\d\d$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be date', $path);
+                        throw new InvalidSchemaValueException('Expected to be date got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_DURATION:
                     if (!preg_match(self::DURATION_REGEX, $value)) {
-                        throw new InvalidSchemaValueException('Expected to be duration', $path);
+                        throw new InvalidSchemaValueException('Expected to be duration got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_EMAIL:
                 case self::FORMAT_IDNEMAIL:
                     if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                        throw new InvalidSchemaValueException('Expected to be email', $path);
+                        throw new InvalidSchemaValueException('Expected to be email got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_HOSTNAME:
                 case self::FORMAT_IDNHOSTNAME:
                     if (!filter_var($value, FILTER_VALIDATE_DOMAIN)) {
-                        throw new InvalidSchemaValueException('Expected to be hostname', $path);
+                        throw new InvalidSchemaValueException('Expected to be hostname got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_IPV4:
                     if (!preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be ipv4', $path);
+                        throw new InvalidSchemaValueException('Expected to be ipv4 got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_IPV6:
                     if (!preg_match('/^[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be ipv6', $path);
+                        throw new InvalidSchemaValueException('Expected to be ipv6 got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_UUID:
                     if (!preg_match('/^[a-f0-9]{8}\-[a-f0-9]{4}\-4[a-f0-9]{3}\-(8|9|a|b)[a-f0-9]{3}\-[a-f0-9]{12}$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be uuid', $path);
+                        throw new InvalidSchemaValueException('Expected to be uuid got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_URI:
-                case self::FORMAT_URIREFERENCE:
                 case self::FORMAT_IRI:
-                case self::FORMAT_IRIREFERENCE:
                     if (!filter_var($value, FILTER_VALIDATE_URL)) {
-                        throw new InvalidSchemaValueException('Expected to be uri', $path);
+                        throw new InvalidSchemaValueException('Expected to be uri got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_URIREFERENCE:
+                case self::FORMAT_IRIREFERENCE:
+                    if (!self::validateRelativeUri($value)) {
+                        throw new InvalidSchemaValueException('Expected to be uri-reference got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_URITEMPLATE:
                     if (!preg_match('/^$/', $value)) {
-                        throw new InvalidSchemaValueException('uri-template', $path);
+                        throw new InvalidSchemaValueException('Expected to be uri-template got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_JSONPOINTER:
-                case self::FORMAT_RELATIVEJSONPOINTER:
+                case self::FORMAT_RELATIVEJSONPOINTER: // TODO
                     if (!preg_match('/^\/?([^\/]+\/)*[^\/]+$/', $value)) {
-                        throw new InvalidSchemaValueException('json-pointer', $path);
+                        throw new InvalidSchemaValueException('Expected to be json-pointer got `' . $value . '`', $path);
                     }
                     break;
                 case self::FORMAT_REGEX:
                     if (!filter_var($value, FILTER_VALIDATE_REGEXP)) {
-                        throw new InvalidSchemaValueException('Expected to be email', $path);
+                        throw new InvalidSchemaValueException('Expected to be email got `' . $value . '`', $path);
                     }
                     break;
             }
+        }
+    }
+
+    private static function validateRelativeUri(string $url): bool
+    {
+        if (parse_url($url, PHP_URL_SCHEME) != '') {
+            // URL is not relative
+            return !(filter_var($url, FILTER_VALIDATE_URL) === false);
+        } else {
+            // PHP filter_var does not support relative urls, so we simulate a full URL
+            return !(filter_var('http://www.example.com/' . ltrim($url, '/'), FILTER_VALIDATE_URL) === false);
         }
     }
 
