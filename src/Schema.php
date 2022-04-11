@@ -196,7 +196,7 @@ class Schema implements JsonSerializable
         'null' => 'NULL',
     ];
 
-    public static function validateInstance(object $value): object
+    public static function validateInstance(Model $value): object
     {
         $schema = self::classSchema(get_class($value));
 
@@ -274,9 +274,7 @@ class Schema implements JsonSerializable
                     $schema->validate($value, $root, [...$path, 'oneOf', $i]);
                     $oneOf++;
 
-                    if ($oneOf > 1) {
-                        break;
-                    }
+                    break;
                 } catch (InvalidSchemaValueException $_) {
                 }
             }
@@ -354,7 +352,6 @@ class Schema implements JsonSerializable
 
         return $values;
     }
-
 
     /** @return Schema | string */
     public static function classSchema(string $class, ?Schema $root = null)
