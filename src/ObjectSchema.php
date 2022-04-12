@@ -33,7 +33,6 @@ class ObjectSchema extends Schema
      * @param string|null $anchor
      * @param string|null $ref
      * @param array|null $defs
-     * @param array|null $definitions
      * @param string|null $description
      * @param mixed $default
      * @param boolean|null $deprecated
@@ -70,7 +69,6 @@ class ObjectSchema extends Schema
         ?string $anchor = null,
         ?string $ref = null,
         ?array $defs = null,
-        ?array $definitions = null,
         ?string $description = null,
         $default = null,
         ?bool $deprecated = null,
@@ -90,7 +88,6 @@ class ObjectSchema extends Schema
             $anchor,
             $ref,
             $defs,
-            $definitions,
             $title,
             $description,
             $default,
@@ -120,17 +117,17 @@ class ObjectSchema extends Schema
         }
     }
 
-    public static function fromJson(string $json): Schema
+    public static function fromJson($json): Schema
     {
-        $decoded = json_decode($json, true);
+        $decoded = is_array($json) ? $json : json_decode($json, true);
 
         $properties = isset($decoded['properties']) ? [] : null;
-        foreach ($decoded['properties'] as $key => $schema) {
+        foreach ($decoded['properties'] ?? [] as $key => $schema) {
             $properties[$key] = Schema::fromJson($schema);
         }
 
         $patternProperties = isset($decoded['patternProperties']) ? [] : null;
-        foreach ($decoded['patternProperties'] as $key => $schema) {
+        foreach ($decoded['patternProperties'] ?? [] as $key => $schema) {
             $patternProperties[$key] = Schema::fromJson($schema);
         }
 
@@ -145,10 +142,9 @@ class ObjectSchema extends Schema
             $decoded['maxProperties'],
 
             $decoded['id'],
-            $decoded['anchor'],
+            $decoded['$anchor'],
             $decoded['ref'],
-            isset($decoded['defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['defs']) : null,
-            isset($decoded['definitions']) ? array_map(fn ($def) => self::fromJson($def), $decoded['definitions']) : null,
+            isset($decoded['$defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['$defs']) : null,
             $decoded['title'],
             $decoded['description'],
             $decoded['default'],

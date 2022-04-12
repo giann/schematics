@@ -36,7 +36,6 @@ class NumberSchema extends Schema
      * @param string|null $anchor
      * @param string|null $ref
      * @param array|null $defs
-     * @param array|null $definitions
      * @param string|null $description
      * @param mixed $default
      * @param boolean|null $deprecated
@@ -63,7 +62,6 @@ class NumberSchema extends Schema
         ?string $anchor = null,
         ?string $ref = null,
         ?array $defs = null,
-        ?array $definitions = null,
         ?string $description = null,
         $default = null,
         ?bool $deprecated = null,
@@ -83,7 +81,6 @@ class NumberSchema extends Schema
             $anchor,
             $ref,
             $defs,
-            $definitions,
             $title,
             $description,
             $default,
@@ -107,9 +104,9 @@ class NumberSchema extends Schema
         $this->exclusiveMaximum = $exclusiveMaximum;
     }
 
-    public static function fromJson(string $json): Schema
+    public static function fromJson($json): Schema
     {
-        $decoded = json_decode($json, true);
+        $decoded = is_array($json) ? $json : json_decode($json, true);
 
         return new NumberSchema(
             (is_array($decoded['type']) && in_array('integer', $decoded['type'])) || (is_string($decoded['type']) && $decoded['type'] == 'integer'),
@@ -120,10 +117,9 @@ class NumberSchema extends Schema
             $decoded['exclusiveMaximum'],
 
             $decoded['id'],
-            $decoded['anchor'],
+            $decoded['$anchor'],
             $decoded['ref'],
-            array_map(fn ($def) => self::fromJson($def), $decoded['defs']),
-            array_map(fn ($def) => self::fromJson($def), $decoded['definitions']),
+            isset($decoded['$defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['$defs']) : null,
             $decoded['title'],
             $decoded['description'],
             $decoded['default'],
@@ -132,10 +128,10 @@ class NumberSchema extends Schema
             $decoded['writeOnly'],
             $decoded['const'],
             $decoded['enum'],
-            array_map(fn ($def) => self::fromJson($def), $decoded['allOf']),
-            array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']),
-            array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']),
-            self::fromJson($decoded['not']),
+            isset($decoded['allOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['allOf']) : null,
+            isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
+            isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
+            isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
         );
     }
 

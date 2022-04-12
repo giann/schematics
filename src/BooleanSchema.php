@@ -18,7 +18,6 @@ class BooleanSchema extends Schema
      * @param string|null $anchor
      * @param string|null $ref
      * @param array|null $defs
-     * @param array|null $definitions
      * @param string|null $description
      * @param mixed $default
      * @param boolean|null $deprecated
@@ -38,7 +37,6 @@ class BooleanSchema extends Schema
         ?string $anchor = null,
         ?string $ref = null,
         ?array $defs = null,
-        ?array $definitions = null,
         ?string $description = null,
         $default = null,
         ?bool $deprecated = null,
@@ -58,7 +56,6 @@ class BooleanSchema extends Schema
             $anchor,
             $ref,
             $defs,
-            $definitions,
             $title,
             $description,
             $default,
@@ -75,16 +72,15 @@ class BooleanSchema extends Schema
         );
     }
 
-    public static function fromJson(string $json): Schema
+    public static function fromJson($json): Schema
     {
-        $decoded = json_decode($json, true);
+        $decoded = is_array($json) ? $json : json_decode($json, true);
 
         return new BooleanSchema(
             $decoded['id'],
-            $decoded['anchor'],
+            $decoded['$anchor'],
             $decoded['ref'],
-            isset($decoded['defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['defs']) : null,
-            isset($decoded['definitions']) ? array_map(fn ($def) => self::fromJson($def), $decoded['definitions']) : null,
+            isset($decoded['$defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['$defs']) : null,
             $decoded['title'],
             $decoded['description'],
             $decoded['default'],

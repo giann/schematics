@@ -12,12 +12,16 @@ namespace Giann\Schematics;
  */
 class ArraySchema extends Schema
 {
-    public ?Schema $items = null;
+    /** @var Schema|string|null|bool */
+    public $items = null;
     /** @var Schema[] */
     public ?array $prefixItems = null;
+    public ?bool $additionalItems = null;
     public ?Schema $contains = null;
     public ?int $minContains = null;
     public ?int $maxContains = null;
+    public ?int $minItems;
+    public ?int $maxItems;
     public ?bool $uniqueItems = null;
 
     /**
@@ -26,7 +30,6 @@ class ArraySchema extends Schema
      * @param string|null $anchor
      * @param string|null $ref
      * @param array|null $defs
-     * @param array|null $definitions
      * @param string|null $description
      * @param mixed $default
      * @param boolean|null $deprecated
@@ -39,8 +42,9 @@ class ArraySchema extends Schema
      * @param array|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
-     * @param Schema|string|null $items
-     * @param array|null $prefixItems
+     * @param Schema|string|null|bool $items
+     * @param Schema[]|null $prefixItems
+     * @param boolean]|null $additionalItems
      * @param Schema|null $contains
      * @param integer|null $minContains
      * @param integer|null $maxContains
@@ -50,9 +54,12 @@ class ArraySchema extends Schema
         $items = null,
         /** @var Schema[] */
         ?array $prefixItems = null,
+        ?bool $additionalItems = null,
         ?Schema $contains = null,
         ?int $minContains = null,
         ?int $maxContains = null,
+        ?int $minItems = null,
+        ?int $maxItems = null,
         ?bool $uniqueItems = null,
 
         ?string $title = null,
@@ -60,7 +67,6 @@ class ArraySchema extends Schema
         ?string $anchor = null,
         ?string $ref = null,
         ?array $defs = null,
-        ?array $definitions = null,
         ?string $description = null,
         $default = null,
         ?bool $deprecated = null,
@@ -80,7 +86,6 @@ class ArraySchema extends Schema
             $anchor,
             $ref,
             $defs,
-            $definitions,
             $title,
             $description,
             $default,
@@ -98,29 +103,34 @@ class ArraySchema extends Schema
 
         $this->items = is_string($items) ? new Schema(null, null, null, $items) : $items;
         $this->prefixItems = $prefixItems;
+        $this->additionalItems = $additionalItems;
         $this->contains = $contains;
         $this->minContains = $minContains;
         $this->maxContains = $maxContains;
+        $this->minItems = $minItems;
+        $this->maxItems = $maxItems;
         $this->uniqueItems = $uniqueItems;
     }
 
-    public static function fromJson(string $json): Schema
+    public static function fromJson($json): Schema
     {
-        $decoded = json_decode($json, true);
+        $decoded = is_array($json) ? $json : json_decode($json, true);
 
         return new ArraySchema(
             is_array($decoded['items']) ? Schema::fromJson($decoded['items']) : $decoded['items'],
             isset($decoded['prefixItems']) ? array_map(fn ($el) => Schema::fromJson($el), $decoded['prefixItems']) : null,
+            $decoded['additionalItems'],
             isset($decoded['contains']) ? Schema::fromJson($decoded['contains']) : null,
             $decoded['minContains'],
             $decoded['maxContains'],
+            $decoded['minItems'],
+            $decoded['maxItems'],
             $decoded['uniqueItems'],
 
             $decoded['id'],
-            $decoded['anchor'],
+            $decoded['$anchor'],
             $decoded['ref'],
-            isset($decoded['defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['defs']) : null,
-            isset($decoded['definitions']) ? array_map(fn ($def) => self::fromJson($def), $decoded['definitions']) : null,
+            isset($decoded['$defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['$defs']) : null,
             $decoded['title'],
             $decoded['description'],
             $decoded['default'],
@@ -153,36 +163,29 @@ class ArraySchema extends Schema
         return $this;
     }
 
+    private static function is_associative($array): bool
+    {
+        if (!is_array($array)) {
+            return false;
+        }
+
+        if ([] === $array) {
+            return true;
+        }
+
+        if (array_keys($array) !== range(0, count($array) - 1)) {
+            return true;
+        }
+
+        // Dealing with a Sequential array
+        return false;
+    }
+
     public function validate($value, ?Schema $root = null, array $path = ['#']): void
     {
         $root = $root ?? $this;
 
         parent::validate($value, $root, $path);
-
-        if ($this->minContains !== null && count($value) < $this->minContains) {
-            throw new InvalidSchemaValueException("Expected at least ' . $this->minContains . ' elements got " . count($value), $path);
-        }
-
-        if ($this->maxContains !== null && count($value) > $this->maxContains) {
-            throw new InvalidSchemaValueException("Expected at most ' . $this->maxContains . ' elements got " . count($value), $path);
-        }
-
-        if ($this->uniqueItems === true) {
-            $items = [];
-            foreach ($value as $item) {
-                if (in_array($item, $items)) {
-                    throw new InvalidSchemaValueException('Expected unique items', $path);
-                }
-
-                $items[] = $item;
-            }
-        }
-
-        if ($this->prefixItems !== null && count($this->prefixItems) > 0) {
-            foreach ($this->prefixItems as $i => $prefixItem) {
-                $prefixItem->validate($value[$i], $root, [...$path, 'prefixItems', $i]);
-            }
-        }
 
         if ($this->contains !== null) {
             $contains = false;
@@ -200,11 +203,52 @@ class ArraySchema extends Schema
             if (!$contains) {
                 throw new InvalidSchemaValueException('Expected at least one item to validate against:\n' . json_encode($this->contains, JSON_PRETTY_PRINT), $path);
             }
+
+            if ($this->minContains !== null && count($value) < $this->minContains) {
+                throw new InvalidSchemaValueException("Expected at least ' . $this->minContains . ' to validate against `contains` elements got " . count($value), $path);
+            }
+
+            if ($this->maxContains !== null && count($value) > $this->maxContains) {
+                throw new InvalidSchemaValueException("Expected at most ' . $this->maxContains . ' to validate against `contains` elements got " . count($value), $path);
+            }
+        }
+
+        if ($this->minItems !== null && count($value) < $this->minItems) {
+            throw new InvalidSchemaValueException("Expected at least ' . $this->minItems . ' elements got " . count($value), $path);
+        }
+
+        if ($this->maxItems !== null && count($value) > $this->maxItems) {
+            throw new InvalidSchemaValueException("Expected at most ' . $this->maxItems . ' elements got " . count($value), $path);
+        }
+
+        if ($this->uniqueItems === true) {
+            $items = [];
+            foreach ($value as $item) {
+                if (self::is_associative($item)) {
+                    ksort($item);
+                }
+
+                if (in_array($item, $items, true)) {
+                    throw new InvalidSchemaValueException('Expected unique items', $path);
+                }
+
+                $items[] = $item;
+            }
+        }
+
+        if ($this->prefixItems !== null && count($this->prefixItems) > 0) {
+            foreach ($this->prefixItems as $i => $prefixItem) {
+                $prefixItem->validate($value[$i], $root, [...$path, 'prefixItems', $i]);
+            }
         }
 
         if ($this->items !== null) {
-            foreach ($value as $i => $item) {
-                $this->items->validate($item, $root, [...$path, 'items', $i]);
+            if ($this->items instanceof Schema) {
+                foreach ($value as $i => $item) {
+                    $this->items->validate($item, $root, [...$path, 'items', $i]);
+                }
+            } else if (is_bool($this->items)) {
+                throw new NotYetImplementedException();
             }
         }
     }

@@ -55,7 +55,6 @@ class Schema implements JsonSerializable
     // To avoid resolving the ref multiple times
     private ?string $resolvedRef = null;
     public ?array $defs = null;
-    public ?array $definitions = null;
     public ?string $title = null;
     public ?string $description = null;
     /** @var mixed */
@@ -89,7 +88,6 @@ class Schema implements JsonSerializable
      * @param string|null $anchor
      * @param string|null $ref
      * @param array|null $defs
-     * @param array|null $definitions
      * @param string|null $title
      * @param string|null $description
      * @param mixed $default
@@ -110,7 +108,6 @@ class Schema implements JsonSerializable
         ?string $anchor = null,
         ?string $ref = null,
         ?array $defs = null,
-        ?array $definitions = null,
         ?string $title = null,
         ?string $description = null,
         $default = null,
@@ -130,7 +127,6 @@ class Schema implements JsonSerializable
         $this->anchor = $anchor;
         $this->ref = $ref;
         $this->defs = $defs;
-        $this->definitions = $definitions;
         $this->title = $title;
         $this->description = $description;
         $this->default = $default;
@@ -149,14 +145,33 @@ class Schema implements JsonSerializable
         }
     }
 
-    public static function fromJson(string $json): Schema
+    /**
+     * @param string|array $json
+     * @return Schema
+     */
+    public static function fromJson($json): Schema
     {
-        $decoded = json_decode($json, true);
+        $decoded = is_array($json) ? $json : json_decode($json, true);
 
         // TODO: can we have type both string and object and have then object properties?
         $type = is_array($decoded['type']) ? array_filter($decoded['type'], fn ($el) => $el !== 'null')[0] : $decoded['type'];
 
-        switch (strtolower($type)) {
+        // No type was specified, try to guess it from schema properties
+        if ($type === null) {
+            $keys = array_keys($decoded);
+
+            if (count(array_intersect(['items', 'prefixItems', 'contains', 'minContains', 'maxContains', 'minItems', 'maxItems', 'uniqueItems'], $keys)) > 0) {
+                $type = 'array';
+            } else if (count(array_intersect(['multipleOf', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'], $keys)) > 0) {
+                $type = 'number';
+            } else if (count(array_intersect(['properties', 'patternProperties', 'additionalProperties', 'unevaluatedProperties', 'requiredProperties', 'propertyNames', 'minProperties', 'maxProperties'], $keys)) > 0) {
+                $type = 'object';
+            } else if (count(array_intersect(['format', 'minLength', 'maxLength', 'pattern', 'contentEncoding', 'contentMediaType'], $keys)) > 0) {
+                $type = 'string';
+            }
+        }
+
+        switch (strtolower($type ?? '')) {
             case 'string':
                 return StringSchema::fromJson($json);
             case 'array':
@@ -175,10 +190,9 @@ class Schema implements JsonSerializable
         return new Schema(
             $decoded['type'],
             $decoded['id'],
-            $decoded['anchor'],
+            $decoded['$anchor'],
             $decoded['ref'],
-            isset($decoded['defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['defs']) : null,
-            isset($decoded['definitions']) ? array_map(fn ($def) => self::fromJson($def), $decoded['definitions']) : null,
+            isset($decoded['$defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['$defs']) : null,
             $decoded['title'],
             $decoded['description'],
             $decoded['default'],
@@ -199,17 +213,17 @@ class Schema implements JsonSerializable
         $root ??= $this;
 
         if ($this->ref !== null && $this->resolvedRef === null) {
-            $root->definitions ??= [];
+            $root->defs ??= [];
 
             if ($this->ref == '#') {
                 $this->resolvedRef = '#';
             } else {
-                $this->resolvedRef = '#/definitions/' . $this->ref;
+                $this->resolvedRef = '#/$def/' . $this->ref;
 
-                if (!isset($root->definitions[$this->ref])) {
-                    $root->definitions[$this->ref] = true; // Avoid circular ref resolving
+                if (!isset($root->defs[$this->ref])) {
+                    $root->defs[$this->ref] = true; // Avoid circular ref resolving
                     $schema = self::classSchema($this->ref, $root);
-                    $root->definitions[$this->ref] = $schema instanceof Schema ? $schema->resolveRef($root) : $schema;
+                    $root->defs[$this->ref] = $schema instanceof Schema ? $schema->resolveRef($root) : $schema;
                 }
             }
         }
@@ -302,17 +316,17 @@ class Schema implements JsonSerializable
 
                 if (
                     count($basePath) === 1 && $basePath[0] === ''
-                    && count($fragment) > 2 && $fragment[1] === 'definitions'
+                    && count($fragment) > 2 && $fragment[1] === '$defs'
                 ) {
-                    if (isset($root->definitions[$fragment[2]])) {
-                        $ref = $root->definitions[$fragment[2]];
+                    if (isset($root->defs[$fragment[2]])) {
+                        $ref = $root->defs[$fragment[2]];
 
                         $ref->validate($value, $root, [...$path, $this->resolvedRef]);
                     } else {
                         throw new InvalidArgumentException('Can\'t resolve $ref ' . ($this->resolvedRef ?? $this->ref ?? ''));
                     }
                 } else {
-                    throw new NotYetImplementedException("Reference other than #/definitions/<name> are not yet implemented: " . ($this->resolvedRef ?? $this->ref ?? ''));
+                    throw new NotYetImplementedException('Reference other than #/$defs/<name> are not yet implemented: ' . ($this->resolvedRef ?? $this->ref ?? ''));
                 }
             }
         }
@@ -468,15 +482,15 @@ class Schema implements JsonSerializable
         if ($parentReflection !== false) {
             $parent = $parentReflection->getName();
 
-            $root->definitions ??= [];
-            if (!isset($root->definitions[$parent])) {
-                $root->definitions[$parent] = true; // Avoid circular ref resolving
+            $root->defs ??= [];
+            if (!isset($root->defs[$parent])) {
+                $root->defs[$parent] = true; // Avoid circular ref resolving
                 $parentSchema = self::classSchema($parent, $root);
-                $root->definitions[$parent] = $parentSchema instanceof Schema ? $parentSchema->resolveRef($root) : null;
+                $root->defs[$parent] = $parentSchema instanceof Schema ? $parentSchema->resolveRef($root) : null;
             }
 
             $ref = new Schema(null, null, null, $parent);
-            $ref->resolvedRef = '#/definitions/' . $parent;
+            $ref->resolvedRef = '#/$defs/' . $parent;
             $schema->allOf = ($schema->allOf ?? [])
                 + [$ref];
         }
@@ -590,7 +604,6 @@ class Schema implements JsonSerializable
             + ($this->anchor !== null ? ['$anchor' => $this->anchor] : [])
             + ($this->resolvedRef !== null ? ['$ref' => $this->resolvedRef] : [])
             + ($this->defs !== null ? ['$defs' => $this->defs] : [])
-            + ($this->definitions !== null ? ['definitions' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->definitions)] : [])
             + ($this->title !== null ? ['title' => $this->title] : [])
             + ($this->description !== null ? ['description' => $this->description] : [])
             + ($this->default !== null ? ['default' => $this->default] : [])
