@@ -74,4 +74,29 @@ class BooleanSchema extends Schema
             $enumPattern,
         );
     }
+
+    public static function fromJson(string $json): Schema
+    {
+        $decoded = json_decode($json, true);
+
+        return new BooleanSchema(
+            $decoded['id'],
+            $decoded['anchor'],
+            $decoded['ref'],
+            isset($decoded['defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['defs']) : null,
+            isset($decoded['definitions']) ? array_map(fn ($def) => self::fromJson($def), $decoded['definitions']) : null,
+            $decoded['title'],
+            $decoded['description'],
+            $decoded['default'],
+            $decoded['deprecated'],
+            $decoded['readOnly'],
+            $decoded['writeOnly'],
+            $decoded['const'],
+            $decoded['enum'],
+            isset($decoded['allOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['allOf']) : null,
+            isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
+            isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
+            isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
+        );
+    }
 }

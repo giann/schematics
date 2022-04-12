@@ -72,6 +72,13 @@ class StringSchema extends Schema
      * @param string|null $contentMediaType
      */
     public function __construct(
+        ?string $format = null,
+        ?int $minLength = null,
+        ?int $maxLength = null,
+        ?string $pattern = null,
+        ?string $contentEncoding = null,
+        ?string $contentMediaType = null,
+
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -89,15 +96,7 @@ class StringSchema extends Schema
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
-        ?string $enumPattern = null,
-
-        ?string $format = null,
-        ?int $minLength = null,
-        ?int $maxLength = null,
-        ?string $pattern = null,
-        ?string $contentEncoding = null,
-        ?string $contentMediaType = null
-
+        ?string $enumPattern = null
     ) {
         parent::__construct(
             Schema::TYPE_STRING,
@@ -131,6 +130,38 @@ class StringSchema extends Schema
         if ($this->contentEncoding && !in_array($this->contentEncoding, ['7bit', '8bit', 'binary', 'quoted-printable', 'base16', 'base32', 'base64'])) {
             throw new InvalidArgumentException('contentEncoding must be 7bit, 8bit, binary, quoted-printable, base16, base32 or base64');
         }
+    }
+
+    public static function fromJson(string $json): Schema
+    {
+        $decoded = json_decode($json, true);
+
+        return new StringSchema(
+            $decoded['format'],
+            $decoded['minLength'],
+            $decoded['maxLength'],
+            $decoded['pattern'],
+            $decoded['contentEncoding'],
+            $decoded['contentMediaType'],
+
+            $decoded['id'],
+            $decoded['anchor'],
+            $decoded['ref'],
+            isset($decoded['defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['defs']) : null,
+            isset($decoded['definitions']) ? array_map(fn ($def) => self::fromJson($def), $decoded['definitions']) : null,
+            $decoded['title'],
+            $decoded['description'],
+            $decoded['default'],
+            $decoded['deprecated'],
+            $decoded['readOnly'],
+            $decoded['writeOnly'],
+            $decoded['const'],
+            $decoded['enum'],
+            isset($decoded['allOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['allOf']) : null,
+            isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
+            isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
+            isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
+        );
     }
 
     public function validate($value, ?Schema $root = null, array $path = ['#']): void

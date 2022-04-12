@@ -149,6 +149,51 @@ class Schema implements JsonSerializable
         }
     }
 
+    public static function fromJson(string $json): Schema
+    {
+        $decoded = json_decode($json, true);
+
+        // TODO: can we have type both string and object and have then object properties?
+        $type = is_array($decoded['type']) ? array_filter($decoded['type'], fn ($el) => $el !== 'null')[0] : $decoded['type'];
+
+        switch (strtolower($type)) {
+            case 'string':
+                return StringSchema::fromJson($json);
+            case 'array':
+                return ArraySchema::fromJson($json);
+            case 'boolean':
+                return BooleanSchema::fromJson($json);
+            case 'null':
+                return NullSchema::fromJson($json);
+            case 'number':
+            case 'integer':
+                return NumberSchema::fromJson($json);
+            case 'object':
+                return ObjectSchema::fromJson($json);
+        }
+
+        return new Schema(
+            $decoded['type'],
+            $decoded['id'],
+            $decoded['anchor'],
+            $decoded['ref'],
+            isset($decoded['defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['defs']) : null,
+            isset($decoded['definitions']) ? array_map(fn ($def) => self::fromJson($def), $decoded['definitions']) : null,
+            $decoded['title'],
+            $decoded['description'],
+            $decoded['default'],
+            $decoded['deprecated'],
+            $decoded['readOnly'],
+            $decoded['writeOnly'],
+            $decoded['const'],
+            $decoded['enum'],
+            isset($decoded['allOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['allOf']) : null,
+            isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
+            isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
+            isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
+        );
+    }
+
     protected function resolveRef(?Schema $root): Schema
     {
         $root ??= $this;

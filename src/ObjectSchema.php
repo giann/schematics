@@ -56,6 +56,15 @@ class ObjectSchema extends Schema
      * @param integer|null $maxProperties
      */
     public function __construct(
+        ?array $properties = null,
+        ?array $patternProperties = null,
+        $additionalProperties = null,
+        $unevaluatedProperties = null,
+        ?array $requiredProperties = null,
+        ?StringSchema $propertyNames = null,
+        ?int $minProperties = null,
+        ?int $maxProperties = null,
+
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -73,15 +82,7 @@ class ObjectSchema extends Schema
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
-        ?string $enumPattern = null,
-        ?array $properties = null,
-        ?array $patternProperties = null,
-        $additionalProperties = null,
-        $unevaluatedProperties = null,
-        ?array $requiredProperties = null,
-        ?StringSchema $propertyNames = null,
-        ?int $minProperties = null,
-        ?int $maxProperties = null
+        ?string $enumPattern = null
     ) {
         parent::__construct(
             Schema::TYPE_OBJECT,
@@ -117,6 +118,50 @@ class ObjectSchema extends Schema
         if ($this->unevaluatedProperties !== null) {
             throw new NotYetImplementedException("unevaluatedProperties is not yet implemented");
         }
+    }
+
+    public static function fromJson(string $json): Schema
+    {
+        $decoded = json_decode($json, true);
+
+        $properties = isset($decoded['properties']) ? [] : null;
+        foreach ($decoded['properties'] as $key => $schema) {
+            $properties[$key] = Schema::fromJson($schema);
+        }
+
+        $patternProperties = isset($decoded['patternProperties']) ? [] : null;
+        foreach ($decoded['patternProperties'] as $key => $schema) {
+            $patternProperties[$key] = Schema::fromJson($schema);
+        }
+
+        return new ObjectSchema(
+            $properties,
+            $patternProperties,
+            is_array($decoded['additionalProperties']) ? Schema::fromJson($decoded['additionalProperties']) : null,
+            is_array($decoded['unevaluatedProperties']) ? Schema::fromJson($decoded['unevaluatedProperties']) : null,
+            $decoded['requiredProperties'],
+            is_array($decoded['propertyNames']) ? StringSchema::fromJson($decoded['propertyNames']) : null,
+            $decoded['minProperties'],
+            $decoded['maxProperties'],
+
+            $decoded['id'],
+            $decoded['anchor'],
+            $decoded['ref'],
+            isset($decoded['defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['defs']) : null,
+            isset($decoded['definitions']) ? array_map(fn ($def) => self::fromJson($def), $decoded['definitions']) : null,
+            $decoded['title'],
+            $decoded['description'],
+            $decoded['default'],
+            $decoded['deprecated'],
+            $decoded['readOnly'],
+            $decoded['writeOnly'],
+            $decoded['const'],
+            $decoded['enum'],
+            isset($decoded['allOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['allOf']) : null,
+            isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
+            isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
+            isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
+        );
     }
 
     protected function resolveRef(?Schema $root): Schema

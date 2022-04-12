@@ -107,6 +107,38 @@ class NumberSchema extends Schema
         $this->exclusiveMaximum = $exclusiveMaximum;
     }
 
+    public static function fromJson(string $json): Schema
+    {
+        $decoded = json_decode($json, true);
+
+        return new NumberSchema(
+            (is_array($decoded['type']) && in_array('integer', $decoded['type'])) || (is_string($decoded['type']) && $decoded['type'] == 'integer'),
+            $decoded['multipleOf'],
+            $decoded['minimum'],
+            $decoded['maximum'],
+            $decoded['exclusiveMinimum'],
+            $decoded['exclusiveMaximum'],
+
+            $decoded['id'],
+            $decoded['anchor'],
+            $decoded['ref'],
+            array_map(fn ($def) => self::fromJson($def), $decoded['defs']),
+            array_map(fn ($def) => self::fromJson($def), $decoded['definitions']),
+            $decoded['title'],
+            $decoded['description'],
+            $decoded['default'],
+            $decoded['deprecated'],
+            $decoded['readOnly'],
+            $decoded['writeOnly'],
+            $decoded['const'],
+            $decoded['enum'],
+            array_map(fn ($def) => self::fromJson($def), $decoded['allOf']),
+            array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']),
+            array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']),
+            self::fromJson($decoded['not']),
+        );
+    }
+
     public function validate($value, ?Schema $root = null, array $path = ['#']): void
     {
         $root = $root ?? $this;

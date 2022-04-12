@@ -47,6 +47,14 @@ class ArraySchema extends Schema
      * @param boolean|null $uniqueItems
      */
     public function __construct(
+        $items = null,
+        /** @var Schema[] */
+        ?array $prefixItems = null,
+        ?Schema $contains = null,
+        ?int $minContains = null,
+        ?int $maxContains = null,
+        ?bool $uniqueItems = null,
+
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -64,15 +72,7 @@ class ArraySchema extends Schema
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
-        ?string $enumPattern = null,
-
-        $items = null,
-        /** @var Schema[] */
-        ?array $prefixItems = null,
-        ?Schema $contains = null,
-        ?int $minContains = null,
-        ?int $maxContains = null,
-        ?bool $uniqueItems = null
+        ?string $enumPattern = null
     ) {
         parent::__construct(
             Schema::TYPE_ARRAY,
@@ -102,6 +102,38 @@ class ArraySchema extends Schema
         $this->minContains = $minContains;
         $this->maxContains = $maxContains;
         $this->uniqueItems = $uniqueItems;
+    }
+
+    public static function fromJson(string $json): Schema
+    {
+        $decoded = json_decode($json, true);
+
+        return new ArraySchema(
+            is_array($decoded['items']) ? Schema::fromJson($decoded['items']) : $decoded['items'],
+            isset($decoded['prefixItems']) ? array_map(fn ($el) => Schema::fromJson($el), $decoded['prefixItems']) : null,
+            isset($decoded['contains']) ? Schema::fromJson($decoded['contains']) : null,
+            $decoded['minContains'],
+            $decoded['maxContains'],
+            $decoded['uniqueItems'],
+
+            $decoded['id'],
+            $decoded['anchor'],
+            $decoded['ref'],
+            isset($decoded['defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['defs']) : null,
+            isset($decoded['definitions']) ? array_map(fn ($def) => self::fromJson($def), $decoded['definitions']) : null,
+            $decoded['title'],
+            $decoded['description'],
+            $decoded['default'],
+            $decoded['deprecated'],
+            $decoded['readOnly'],
+            $decoded['writeOnly'],
+            $decoded['const'],
+            $decoded['enum'],
+            isset($decoded['allOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['allOf']) : null,
+            isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
+            isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
+            isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
+        );
     }
 
     protected function resolveRef(?Schema $root): Schema
