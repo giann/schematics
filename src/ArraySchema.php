@@ -111,8 +111,6 @@ class ArraySchema extends Schema
         parent::resolveRef($root);
 
         if ($this->items !== null) {
-            assert($this->items instanceof Schema);
-
             $this->items->resolveRef($root);
         }
 
@@ -168,7 +166,7 @@ class ArraySchema extends Schema
             }
 
             if (!$contains) {
-                throw new InvalidSchemaValueException('Expected at least one item to validate against ' . $this->contains, $path);
+                throw new InvalidSchemaValueException('Expected at least one item to validate against:\n' . json_encode($this->contains, JSON_PRETTY_PRINT), $path);
             }
         }
 

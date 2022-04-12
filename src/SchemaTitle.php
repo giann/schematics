@@ -11,8 +11,6 @@ namespace Giann\Schematics;
  */
 final class SchemaTitle extends SchemaAttribute
 {
-    public string $title;
-
     public function __construct(string $title)
     {
         parent::__construct("title", $title);

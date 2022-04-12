@@ -11,8 +11,6 @@ namespace Giann\Schematics;
  */
 final class SchemaDescription extends SchemaAttribute
 {
-    public string $description;
-
     public function __construct(string $description)
     {
         parent::__construct("description", $description);

@@ -13,8 +13,13 @@ abstract class SchemaAttribute
 {
     public string $key;
 
+    /** @var mixed */
     public $value;
 
+    /**
+     * @param string $key
+     * @param mixed $value
+     */
     public function __construct(string $key, $value)
     {
         $this->key = $key;

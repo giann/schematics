@@ -45,6 +45,32 @@ class StringSchema extends Schema
     public ?string $contentEncoding = null;
     public ?string $contentMediaType = null;
 
+    /**
+     * @param string|null $title
+     * @param string|null $id
+     * @param string|null $anchor
+     * @param string|null $ref
+     * @param array|null $defs
+     * @param array|null $definitions
+     * @param string|null $description
+     * @param mixed $default
+     * @param boolean|null $deprecated
+     * @param boolean|null $readOnly
+     * @param boolean|null $writeOnly
+     * @param mixed $const
+     * @param array|null $enum
+     * @param array|null $allOf
+     * @param array|null $oneOf
+     * @param array|null $anyOf
+     * @param Schema|null $not
+     * @param string|null $enumPattern
+     * @param string|null $format
+     * @param integer|null $minLength
+     * @param integer|null $maxLength
+     * @param string|null $pattern
+     * @param string|null $contentEncoding
+     * @param string|null $contentMediaType
+     */
     public function __construct(
         ?string $title = null,
         ?string $id = null,

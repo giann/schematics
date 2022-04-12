@@ -58,10 +58,12 @@ class Schema implements JsonSerializable
     public ?array $definitions = null;
     public ?string $title = null;
     public ?string $description = null;
+    /** @var mixed */
     public $default = null;
     public ?bool $deprecated = null;
     public ?bool $readOnly = null;
     public ?bool $writeOnly = null;
+    /** @var mixed */
     public $const = null;
     /**
      * @var string[]|null
@@ -161,7 +163,8 @@ class Schema implements JsonSerializable
 
                 if (!isset($root->definitions[$this->ref])) {
                     $root->definitions[$this->ref] = true; // Avoid circular ref resolving
-                    $root->definitions[$this->ref] = self::classSchema($this->ref, $root)->resolveRef($root);
+                    $schema = self::classSchema($this->ref, $root);
+                    $root->definitions[$this->ref] = $schema instanceof Schema ? $schema->resolveRef($root) : $schema;
                 }
             }
         }
@@ -207,6 +210,12 @@ class Schema implements JsonSerializable
         return $value;
     }
 
+    /**
+     * @param mixed $value
+     * @param Schema|null $root
+     * @param string[] $path
+     * @return void
+     */
     public function validate($value, ?Schema $root = null, array $path = ['#']): void
     {
         $root = $root ?? $this;
@@ -239,7 +248,7 @@ class Schema implements JsonSerializable
 
         if ($this->resolvedRef != null) {
             // Root reference
-            if ($this->ref === '#' && $root !== null && $root !== $this) {
+            if ($this->ref === '#' && $root !== $this) {
                 $root->validate($value, $root, $path);
             } else {
                 $refPath = explode('#', $this->resolvedRef);
@@ -255,10 +264,10 @@ class Schema implements JsonSerializable
 
                         $ref->validate($value, $root, [...$path, $this->resolvedRef]);
                     } else {
-                        throw new InvalidArgumentException('Can\'t resolve $ref ' . $this->resolvedRef ?? $this->ref);
+                        throw new InvalidArgumentException('Can\'t resolve $ref ' . ($this->resolvedRef ?? $this->ref ?? ''));
                     }
                 } else {
-                    throw new NotYetImplementedException("Reference other than #/definitions/<name> are not yet implemented: " . $this->resolvedRef ?? $this->ref);
+                    throw new NotYetImplementedException("Reference other than #/definitions/<name> are not yet implemented: " . ($this->resolvedRef ?? $this->ref ?? ''));
                 }
             }
         }
@@ -333,6 +342,7 @@ class Schema implements JsonSerializable
         if (strpos($constantPattern, '::')) {
             list($cls, $constantPattern) = explode("::", $constantPattern);
             try {
+                assert(class_exists($cls));
                 $refl = new ReflectionClass($cls);
                 $constants = $refl->getConstants();
             } catch (ReflectionException $e) {
@@ -342,8 +352,13 @@ class Schema implements JsonSerializable
             $constants = get_defined_constants();
         }
 
+        /** @var string[] */
         $values = [];
 
+        /**
+         * @var string $val
+         * @var string $name 
+         */
         foreach ($constants as $name => $val) {
             if (fnmatch($constantPattern, $name)) {
                 $values[] = $val;
@@ -376,13 +391,15 @@ class Schema implements JsonSerializable
             return '#';
         }
 
+        assert(class_exists($class));
+
         $classReflection = new ReflectionClass($class);
 
         $reader = new AnnotationReader();
-        /** @var Schema */
-        $schema = $reader->getClassAnnotation($classReflection, self::class);
+        /** @var ?ObjectSchema */
+        $schema = $reader->getClassAnnotation($classReflection, ObjectSchema::class);
 
-        if ($schema === false) {
+        if ($schema === null) {
             throw new InvalidArgumentException('The class ' . $class . ' is not annotated');
         }
 
@@ -409,7 +426,8 @@ class Schema implements JsonSerializable
             $root->definitions ??= [];
             if (!isset($root->definitions[$parent])) {
                 $root->definitions[$parent] = true; // Avoid circular ref resolving
-                $root->definitions[$parent] = self::classSchema($parent, $root)->resolveRef($root);
+                $parentSchema = self::classSchema($parent, $root);
+                $root->definitions[$parent] = $parentSchema instanceof Schema ? $parentSchema->resolveRef($root) : null;
             }
 
             $ref = new Schema(null, null, null, $parent);
@@ -428,7 +446,7 @@ class Schema implements JsonSerializable
                 continue;
             }
 
-            /** @var Schema */
+            /** @var ?Schema */
             $propertySchema = $reader->getPropertyAnnotation($property, Schema::class);
 
             if ($propertySchema !== null) {
@@ -472,35 +490,33 @@ class Schema implements JsonSerializable
                             $propertySchema = (new Schema(null, null, null, $type))->resolveRef($root);
                     }
 
-                    if ($propertySchema !== null) {
-                        if ($propertyType->allowsNull()) {
-                            $propertySchema = new Schema(
-                                // Stupid php 7.4
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                // oneOf
-                                [
-                                    new NullSchema(),
-                                    $propertySchema
-                                ]
-                            );
-                        }
-
-                        $schema->properties[$property->getName()] = $propertySchema;
+                    if ($propertyType->allowsNull()) {
+                        $propertySchema = new Schema(
+                            // Stupid php 7.4
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            // oneOf
+                            [
+                                new NullSchema(),
+                                $propertySchema
+                            ]
+                        );
                     }
+
+                    $schema->properties[$property->getName()] = $propertySchema;
                 }
             }
 
@@ -537,7 +553,7 @@ class Schema implements JsonSerializable
             + ($this->readOnly !== null ? ['readOnly' => $this->readOnly] : [])
             + ($this->writeOnly !== null ? ['writeOnly' => $this->writeOnly] : [])
             + ($this->const !== null ? ['const' => $this->const] : [])
-            + ($this->enum !== null ? ['enum' => array_map(fn ($e) => is_object($e) ? $e->value : $e, $this->enum)] : [])
+            + ($this->enum !== null ? ['enum' => $this->enum] : [])
             + ($this->allOf !== null ? ['allOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->allOf)] : [])
             + ($this->oneOf !== null ? ['oneOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->oneOf)] : [])
             + ($this->anyOf !== null ? ['anyOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->anyOf)] : [])
