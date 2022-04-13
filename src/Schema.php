@@ -17,6 +17,11 @@ use Doctrine\Common\Annotations\Annotation\NamedArgumentConstructor;
 use Doctrine\Common\Annotations\Annotation\Target;
 use Throwable;
 
+// Use to differenciate a property with a null value from the absence of the property. ex: { "const": null }
+final class Absent
+{
+}
+
 class InvalidSchemaValueException extends Exception
 {
     public function __construct(string $message = "", array $path, int $code = 0, ?Throwable $previous = null)
@@ -364,7 +369,7 @@ class Schema implements JsonSerializable
             $decoded['deprecated'],
             $decoded['readOnly'],
             $decoded['writeOnly'],
-            $decoded['const'],
+            array_key_exists('const', $decoded) ? $decoded['const'] : new Absent(),
             $decoded['enum'],
             isset($decoded['allOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['allOf']) : null,
             isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
@@ -554,6 +559,21 @@ class Schema implements JsonSerializable
 
     private function validateCommon($value, ?Schema $root = null, array $path = ['#']): void
     {
+        if (!($this->const instanceof Absent)) {
+            if (self::is_associative($this->const)) ksort($this->const);
+            if (self::is_associative($value)) ksort($this->$value);
+
+            if ($value !== $this->const) {
+                throw new InvalidSchemaValueException(
+                    "Expected value to be the constant\n"
+                        . json_encode($this->const, JSON_PRETTY_PRINT)
+                        . "\ngot:\n"
+                        . json_encode($value, JSON_PRETTY_PRINT),
+                    $path,
+                );
+            }
+        }
+
         if ($this->enum !== null && !in_array($value instanceof JsonSerializable ? $value->jsonSerialize() : $value, $this->enum, true)) {
             throw new InvalidSchemaValueException("Expected value within [" . implode(', ', $this->enum) . '] got `' . $value . '`', $path);
         }
@@ -1229,7 +1249,7 @@ class Schema implements JsonSerializable
             + ($this->deprecated !== null ? ['deprecated' => $this->deprecated] : [])
             + ($this->readOnly !== null ? ['readOnly' => $this->readOnly] : [])
             + ($this->writeOnly !== null ? ['writeOnly' => $this->writeOnly] : [])
-            + ($this->const !== null ? ['const' => $this->const] : [])
+            + (!($this->const instanceof Absent) ? ['const' => $this->const] : [])
             + ($this->enum !== null ? ['enum' => $this->enum] : [])
             + ($this->allOf !== null ? ['allOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->allOf)] : [])
             + ($this->oneOf !== null ? ['oneOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->oneOf)] : [])
