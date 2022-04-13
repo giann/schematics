@@ -113,18 +113,17 @@ class Schema implements JsonSerializable
     public ?Schema $not = null;
 
     // Array properties
-    /** @var Schema|string|null|bool */
+    /** @var Schema|string|null */
     public $items = null;
     /** @var Schema[] */
     public ?array $prefixItems = null;
-    public ?bool $additionalItems = null;
     public ?Schema $contains = null;
     public ?int $minContains = null;
     public ?int $maxContains = null;
     public ?int $minItems;
     public ?int $maxItems;
     public ?bool $uniqueItems = null;
-    /** @var bool|Schema|null */
+    /** @var Schema|null */
     public $unevaluatedItems = null;
 
     // Number properties
@@ -150,15 +149,18 @@ class Schema implements JsonSerializable
     // Object properties
     public ?array $properties = null;
     public ?array $patternProperties = null;
-    /** @var Schema|bool|null */
+    /** @var Schema|null */
     public $additionalProperties = null;
-    /** @var Schema|bool|null */
+    /** @var Schema|null */
     public $unevaluatedProperties = null;
     /** @var string[] */
     public ?array $requiredProperties = null;
-    public ?StringSchema $propertyNames = null;
+    public ?Schema $propertyNames = null;
     public ?int $minProperties = null;
     public ?int $maxProperties = null;
+
+    // A boolean is a valid schema: true validates anything and false nothing
+    private ?bool $unilateral = null;
 
     /**
      * @param string|array|null $type
@@ -180,14 +182,13 @@ class Schema implements JsonSerializable
      * @param Schema|null $not
      * @param string|null $enumPattern
      * 
-     * @param Schema|string|null|bool $items
+     * @param Schema|string|null $items
      * @param Schema[]|null $prefixItems
-     * @param boolean]|null $additionalItems
      * @param Schema|null $contains
      * @param integer|null $minContains
      * @param integer|null $maxContains
      * @param boolean|null $uniqueItems
-     * @param boolean|string|Schema $unevaluatedItems
+     * @param null|Schema $unevaluatedItems
      * 
      * @param int|double|null $multipleOf
      * @param int|double|null $minimum
@@ -204,10 +205,10 @@ class Schema implements JsonSerializable
      * 
      * @param array|null $properties
      * @param array|null $patternProperties
-     * @param Schema|bool|null $additionalProperties
-     * @param Schema|bool|null $unevaluatedProperties
+     * @param Schema|null $additionalProperties
+     * @param Schema|null $unevaluatedProperties
      * @param string[]|null $requiredProperties
-     * @param StringSchema|null $propertyNames
+     * @param Schema|null $propertyNames
      * @param integer|null $minProperties
      * @param integer|null $maxProperties
      */
@@ -233,7 +234,6 @@ class Schema implements JsonSerializable
 
         $items = null,
         ?array $prefixItems = null,
-        ?bool $additionalItems = null,
         ?Schema $contains = null,
         ?int $minContains = null,
         ?int $maxContains = null,
@@ -260,7 +260,7 @@ class Schema implements JsonSerializable
         $additionalProperties = null,
         $unevaluatedProperties = null,
         ?array $requiredProperties = null,
-        ?StringSchema $propertyNames = null,
+        ?Schema $propertyNames = null,
         ?int $minProperties = null,
         ?int $maxProperties = null
     ) {
@@ -288,7 +288,6 @@ class Schema implements JsonSerializable
 
         $this->items = is_string($items) ? new Schema(null, null, null, $items) : $items;
         $this->prefixItems = $prefixItems;
-        $this->additionalItems = $additionalItems;
         $this->contains = $contains;
         $this->minContains = $minContains;
         $this->maxContains = $maxContains;
@@ -329,11 +328,18 @@ class Schema implements JsonSerializable
     }
 
     /**
-     * @param string|array $json
+     * @param string|array|bool $json
      * @return Schema
      */
     public static function fromJson($json): Schema
     {
+        if (is_bool($json) || (is_string($json) && is_bool(json_decode($json)))) {
+            $schema = new Schema();
+            $schema->unilateral = is_bool($json) ? $json : json_decode($json);
+
+            return $schema;
+        }
+
         $decoded = is_array($json) ? $json : json_decode($json, true);
 
         $properties = isset($decoded['properties']) ? [] : null;
@@ -368,16 +374,15 @@ class Schema implements JsonSerializable
             // enumPattern
             null,
 
-            is_array($decoded['items']) ? Schema::fromJson($decoded['items']) : $decoded['items'],
+            isset($decoded['items']) ? Schema::fromJson($decoded['items']) : $decoded['items'],
             isset($decoded['prefixItems']) ? array_map(fn ($el) => Schema::fromJson($el), $decoded['prefixItems']) : null,
-            $decoded['additionalItems'],
             isset($decoded['contains']) ? Schema::fromJson($decoded['contains']) : null,
             $decoded['minContains'],
             $decoded['maxContains'],
             $decoded['minItems'],
             $decoded['maxItems'],
             $decoded['uniqueItems'],
-            is_array($decoded['unevaluatedItems']) ? Schema::fromJson($decoded['unevaluatedItems']) : $decoded['unevaluatedItems'],
+            isset($decoded['unevaluatedItems']) ? Schema::fromJson($decoded['unevaluatedItems']) : null,
 
             $decoded['multipleOf'],
             $decoded['minimum'],
@@ -394,15 +399,16 @@ class Schema implements JsonSerializable
 
             $properties,
             $patternProperties,
-            is_array($decoded['additionalProperties']) ? Schema::fromJson($decoded['additionalProperties']) : null,
-            is_array($decoded['unevaluatedProperties']) ? Schema::fromJson($decoded['unevaluatedProperties']) : null,
+            isset($decoded['additionalProperties']) ? Schema::fromJson($decoded['additionalProperties']) : null,
+            isset($decoded['unevaluatedProperties']) ? Schema::fromJson($decoded['unevaluatedProperties']) : null,
             $decoded['requiredProperties'],
-            is_array($decoded['propertyNames']) ? StringSchema::fromJson($decoded['propertyNames']) : null,
+            isset($decoded['propertyNames']) ? StringSchema::fromJson($decoded['propertyNames']) : null,
             $decoded['minProperties'],
             $decoded['maxProperties'],
         );
     }
 
+    // TODO: we miss some ref to resolve
     protected function resolveRef(?Schema $root): Schema
     {
         $root ??= $this;
@@ -502,6 +508,13 @@ class Schema implements JsonSerializable
     public function validate($value, ?Schema $root = null, array $path = ['#']): void
     {
         $root = $root ?? $this;
+
+        // Schema is a bool
+        if ($this->unilateral === true) {
+            return;
+        } else if ($this->unilateral === false) {
+            throw new InvalidSchemaValueException("Schema rejects everything", $path);
+        }
 
         $this->validateCommon($value, $root, $path);
         $this->validateArray($value, $root, $path);
@@ -697,19 +710,16 @@ class Schema implements JsonSerializable
             }
         }
 
-        if ($this->prefixItems !== null && count($this->prefixItems) > 0) {
+        if (count($this->prefixItems ?? []) > 0) {
             foreach ($this->prefixItems as $i => $prefixItem) {
                 $prefixItem->validate($value[$i], $root, [...$path, 'prefixItems', $i]);
             }
         }
 
         if ($this->items !== null) {
-            if ($this->items instanceof Schema) {
-                foreach ($value as $i => $item) {
-                    $this->items->validate($item, $root, [...$path, 'items', $i]);
-                }
-            } else if (is_bool($this->items)) {
-                throw new NotYetImplementedException('items as boolean is not yet implemented', $path);
+            // Only test items that after prefixItems
+            foreach (array_slice($value, count($this->prefixItems ?? [])) as $i => $item) {
+                $this->items->validate($item, $root, [...$path, 'items', $i]);
             }
         }
 
