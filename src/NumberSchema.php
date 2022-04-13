@@ -12,25 +12,7 @@ namespace Giann\Schematics;
  */
 class NumberSchema extends Schema
 {
-    public bool $integer = false;
-    /** @var int|double|null  */
-    public $multipleOf = null;
-    /** @var int|double|null  */
-    public $minimum = null;
-    /** @var int|double|null  */
-    public $maximum = null;
-    /** @var int|double|null  */
-    public $exclusiveMinimum = null;
-    /** @var int|double|null  */
-    public $exclusiveMaximum = null;
-
     /**
-     * @param boolean $integer
-     * @param int|double|null $multipleOf
-     * @param int|double|null $minimum
-     * @param int|double|null $maximum
-     * @param int|double|null $exclusiveMinimum
-     * @param int|double|null $exclusiveMaximum
      * @param string|null $title
      * @param string|null $id
      * @param string|null $anchor
@@ -48,6 +30,13 @@ class NumberSchema extends Schema
      * @param array|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
+     * 
+     * @param boolean $integer
+     * @param int|double|null $multipleOf
+     * @param int|double|null $minimum
+     * @param int|double|null $maximum
+     * @param int|double|null $exclusiveMinimum
+     * @param int|double|null $exclusiveMaximum
      */
     public function __construct(
         bool $integer = false,
@@ -93,90 +82,25 @@ class NumberSchema extends Schema
             $oneOf,
             $anyOf,
             $not,
-            $enumPattern
+            $enumPattern,
+
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+
+            $integer,
+            $multipleOf,
+            $minimum,
+            $maximum,
+            $exclusiveMinimum,
+            $exclusiveMaximum,
         );
-
-        $this->integer = $integer;
-        $this->multipleOf = $multipleOf;
-        $this->minimum = $minimum;
-        $this->maximum = $maximum;
-        $this->exclusiveMinimum = $exclusiveMinimum;
-        $this->exclusiveMaximum = $exclusiveMaximum;
-    }
-
-    public static function fromJson($json): Schema
-    {
-        $decoded = is_array($json) ? $json : json_decode($json, true);
-
-        return new NumberSchema(
-            (is_array($decoded['type']) && in_array('integer', $decoded['type'])) || (is_string($decoded['type']) && $decoded['type'] == 'integer'),
-            $decoded['multipleOf'],
-            $decoded['minimum'],
-            $decoded['maximum'],
-            $decoded['exclusiveMinimum'],
-            $decoded['exclusiveMaximum'],
-
-            $decoded['id'],
-            $decoded['$anchor'],
-            $decoded['ref'],
-            isset($decoded['$defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['$defs']) : null,
-            $decoded['title'],
-            $decoded['description'],
-            $decoded['default'],
-            $decoded['deprecated'],
-            $decoded['readOnly'],
-            $decoded['writeOnly'],
-            $decoded['const'],
-            $decoded['enum'],
-            isset($decoded['allOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['allOf']) : null,
-            isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
-            isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
-            isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
-        );
-    }
-
-    public function validate($value, ?Schema $root = null, array $path = ['#']): void
-    {
-        $root = $root ?? $this;
-
-        parent::validate($value, $root, $path);
-
-        if (!is_int($value) && $this->integer) {
-            throw new InvalidSchemaValueException("Expected an integer got " . gettype($value), $path);
-        }
-
-        if (!$this->integer && !is_double($value)) {
-            throw new InvalidSchemaValueException("Expected a double got " . gettype($value), $path);
-        }
-
-        if ($this->multipleOf !== null && $value % $this->multipleOf !== 0) {
-            throw new InvalidSchemaValueException("Expected a multiple of " . $this->multipleOf, $path);
-        }
-
-        if ($this->minimum !== null && $value < $this->minimum) {
-            throw new InvalidSchemaValueException("Expected value to be less or equal to " . $this->minimum, $path);
-        }
-
-        if ($this->maximum !== null && $value > $this->maximum) {
-            throw new InvalidSchemaValueException("Expected value to be greater or equal to " . $this->maximum, $path);
-        }
-
-        if ($this->exclusiveMinimum !== null && $value <= $this->exclusiveMinimum) {
-            throw new InvalidSchemaValueException("Expected value to be less than " . $this->exclusiveMinimum, $path);
-        }
-
-        if ($this->exclusiveMaximum !== null && $value >= $this->exclusiveMaximum) {
-            throw new InvalidSchemaValueException("Expected value to be greather than " . $this->exclusiveMaximum, $path);
-        }
-    }
-
-    public function jsonSerialize(): array
-    {
-        return parent::jsonSerialize()
-            + ($this->multipleOf !== null ? ['multipleOf' => $this->multipleOf] : [])
-            + ($this->minimum !== null ? ['minimum' => $this->minimum] : [])
-            + ($this->maximum !== null ? ['maximum' => $this->maximum] : [])
-            + ($this->exclusiveMinimum !== null ? ['exclusiveMinimum' => $this->exclusiveMinimum] : [])
-            + ($this->exclusiveMaximum !== null ? ['exclusiveMaximum' => $this->exclusiveMaximum] : []);
     }
 }

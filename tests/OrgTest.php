@@ -13,7 +13,10 @@ use PHPUnit\Framework\TestCase;
 final class OrgTest extends TestCase
 {
     // List of not yet implemented stuff things
-    private static array $ignore = [];
+    private static array $ignore = [
+        // tries to hit localhost to refer to a local file, we should run a local server to serve it
+        'vocabulary.json'
+    ];
 
     public function testOrg(): void
     {
@@ -34,6 +37,9 @@ final class OrgTest extends TestCase
                 $tests = json_decode(file_get_contents($fileinfo->getPathName()), true);
 
                 foreach ($tests as $test) {
+                    $cases = $test['tests'];
+                    $groupDesc = $test['description'];
+
                     try {
                         $schema = Schema::fromJson($test['schema']);
                     } catch (Throwable $e) {
@@ -41,13 +47,12 @@ final class OrgTest extends TestCase
                         $generalFailedCount++;
 
                         $failed[$fileinfo->getFilename()] ??= [];
-                        $failed[$fileinfo->getFilename()][] = $fileinfo->getFilename() . ' | could not instanciate schematics from its content';
+                        $failed[$fileinfo->getFilename()][] = $fileinfo->getFilename() . ' | ' . $groupDesc . ': could not instanciate schematics from its content';
 
-                        echo PHP_EOL . $fileinfo->getFilename() . ' | could not instanciate schematics from its content';
+                        echo PHP_EOL . $fileinfo->getFilename() . ' | ' . $groupDesc . ': could not instanciate schematics from its content';
+
+                        // throw $e;
                     }
-
-                    $cases = $test['tests'];
-                    $groupDesc = $test['description'];
 
                     foreach ($cases as $case) {
                         $testCount++;

@@ -29,6 +29,12 @@ class InvalidSchemaValueException extends Exception
 
 class NotYetImplementedException extends BadMethodCallException
 {
+    public function __construct(string $message = "Not yet implemented", array $path, int $code = 0, ?Throwable $previous = null)
+    {
+        $message = $message . ' at ' . implode("/", $path);
+
+        parent::__construct($message, $code, $previous);
+    }
 }
 
 //#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]
@@ -46,6 +52,30 @@ class Schema implements JsonSerializable
     const TYPE_ARRAY = 'array';
     const TYPE_BOOLEAN = 'boolean';
     const TYPE_NULL = 'null';
+
+    // http://en.wikipedia.org/wiki/ISO_8601#Durations
+    const DURATION_REGEX = '/^P([0-9]+(?:[,\.][0-9]+)?Y)?([0-9]+(?:[,\.][0-9]+)?M)?([0-9]+(?:[,\.][0-9]+)?D)?(?:T([0-9]+(?:[,\.][0-9]+)?H)?([0-9]+(?:[,\.][0-9]+)?M)?([0-9]+(?:[,\.][0-9]+)?S)?)?$/';
+
+    // https://json-schema.org/understanding-json-schema/reference/string.html#id8
+    const FORMAT_DATETIME = 'date-time';
+    const FORMAT_TIME = 'time';
+    const FORMAT_DATE = 'date';
+    const FORMAT_DURATION = 'duration';
+    const FORMAT_EMAIL = 'email';
+    const FORMAT_IDNEMAIL = 'idn-email';
+    const FORMAT_HOSTNAME = 'hostname';
+    const FORMAT_IDNHOSTNAME = 'idn-hostname';
+    const FORMAT_IPV4 = 'ipv4';
+    const FORMAT_IPV6 = 'ipv6';
+    const FORMAT_UUID = 'uuid';
+    const FORMAT_URI = 'uri';
+    const FORMAT_URIREFERENCE = 'uri-reference';
+    const FORMAT_IRI = 'iri';
+    const FORMAT_IRIREFERENCE = 'iri-reference';
+    const FORMAT_URITEMPLATE = 'uri-template';
+    const FORMAT_JSONPOINTER = 'json-pointer';
+    const FORMAT_RELATIVEJSONPOINTER = 'relative-json-pointer';
+    const FORMAT_REGEX = 'regex';
 
     /** @var string|array|null */
     public $type = null;
@@ -82,6 +112,54 @@ class Schema implements JsonSerializable
     public ?array $anyOf = null;
     public ?Schema $not = null;
 
+    // Array properties
+    /** @var Schema|string|null|bool */
+    public $items = null;
+    /** @var Schema[] */
+    public ?array $prefixItems = null;
+    public ?bool $additionalItems = null;
+    public ?Schema $contains = null;
+    public ?int $minContains = null;
+    public ?int $maxContains = null;
+    public ?int $minItems;
+    public ?int $maxItems;
+    public ?bool $uniqueItems = null;
+    /** @var bool|Schema|null */
+    public $unevaluatedItems = null;
+
+    // Number properties
+    /** @var int|double|null  */
+    public $multipleOf = null;
+    /** @var int|double|null  */
+    public $minimum = null;
+    /** @var int|double|null  */
+    public $maximum = null;
+    /** @var int|double|null  */
+    public $exclusiveMinimum = null;
+    /** @var int|double|null  */
+    public $exclusiveMaximum = null;
+
+    // String properties
+    public ?string $format = null;
+    public ?int $minLength = null;
+    public ?int $maxLength = null;
+    public ?string $pattern = null;
+    public ?string $contentEncoding = null;
+    public ?string $contentMediaType = null;
+
+    // Object properties
+    public ?array $properties = null;
+    public ?array $patternProperties = null;
+    /** @var Schema|bool|null */
+    public $additionalProperties = null;
+    /** @var Schema|bool|null */
+    public $unevaluatedProperties = null;
+    /** @var string[] */
+    public ?array $requiredProperties = null;
+    public ?StringSchema $propertyNames = null;
+    public ?int $minProperties = null;
+    public ?int $maxProperties = null;
+
     /**
      * @param string|array|null $type
      * @param string|null $id
@@ -101,6 +179,37 @@ class Schema implements JsonSerializable
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
+     * 
+     * @param Schema|string|null|bool $items
+     * @param Schema[]|null $prefixItems
+     * @param boolean]|null $additionalItems
+     * @param Schema|null $contains
+     * @param integer|null $minContains
+     * @param integer|null $maxContains
+     * @param boolean|null $uniqueItems
+     * @param boolean|string|Schema $unevaluatedItems
+     * 
+     * @param int|double|null $multipleOf
+     * @param int|double|null $minimum
+     * @param int|double|null $maximum
+     * @param int|double|null $exclusiveMinimum
+     * @param int|double|null $exclusiveMaximum
+     * 
+     * @param string|null $format
+     * @param integer|null $minLength
+     * @param integer|null $maxLength
+     * @param string|null $pattern
+     * @param string|null $contentEncoding
+     * @param string|null $contentMediaType
+     * 
+     * @param array|null $properties
+     * @param array|null $patternProperties
+     * @param Schema|bool|null $additionalProperties
+     * @param Schema|bool|null $unevaluatedProperties
+     * @param string[]|null $requiredProperties
+     * @param StringSchema|null $propertyNames
+     * @param integer|null $minProperties
+     * @param integer|null $maxProperties
      */
     public function __construct(
         $type = null,
@@ -120,7 +229,40 @@ class Schema implements JsonSerializable
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
-        ?string $enumPattern = null
+        ?string $enumPattern = null,
+
+        $items = null,
+        ?array $prefixItems = null,
+        ?bool $additionalItems = null,
+        ?Schema $contains = null,
+        ?int $minContains = null,
+        ?int $maxContains = null,
+        ?int $minItems = null,
+        ?int $maxItems = null,
+        ?bool $uniqueItems = null,
+        $unevaluatedItems = null,
+
+        $multipleOf = null,
+        $minimum = null,
+        $maximum = null,
+        $exclusiveMinimum = null,
+        $exclusiveMaximum = null,
+
+        ?string $format = null,
+        ?int $minLength = null,
+        ?int $maxLength = null,
+        ?string $pattern = null,
+        ?string $contentEncoding = null,
+        ?string $contentMediaType = null,
+
+        ?array $properties = null,
+        ?array $patternProperties = null,
+        $additionalProperties = null,
+        $unevaluatedProperties = null,
+        ?array $requiredProperties = null,
+        ?StringSchema $propertyNames = null,
+        ?int $minProperties = null,
+        ?int $maxProperties = null
     ) {
         $this->type = $type;
         $this->id = $id;
@@ -143,6 +285,47 @@ class Schema implements JsonSerializable
         if ($this->enum === null && $enumPattern !== null) {
             $this->enum = self::patternToEnum($enumPattern);
         }
+
+        $this->items = is_string($items) ? new Schema(null, null, null, $items) : $items;
+        $this->prefixItems = $prefixItems;
+        $this->additionalItems = $additionalItems;
+        $this->contains = $contains;
+        $this->minContains = $minContains;
+        $this->maxContains = $maxContains;
+        $this->minItems = $minItems;
+        $this->maxItems = $maxItems;
+        $this->uniqueItems = $uniqueItems;
+        $this->unevaluatedItems = $unevaluatedItems;
+
+        $this->multipleOf = $multipleOf;
+        $this->minimum = $minimum;
+        $this->maximum = $maximum;
+        $this->exclusiveMinimum = $exclusiveMinimum;
+        $this->exclusiveMaximum = $exclusiveMaximum;
+
+        $this->format = $format;
+        $this->minLength = $minLength;
+        $this->maxLength = $maxLength;
+        $this->pattern = $pattern;
+        $this->contentEncoding = $contentEncoding;
+        $this->contentMediaType = $contentMediaType;
+
+        if ($this->contentEncoding !== null && !in_array($this->contentEncoding, ['7bit', '8bit', 'binary', 'quoted-printable', 'base16', 'base32', 'base64'])) {
+            throw new InvalidArgumentException('contentEncoding must be 7bit, 8bit, binary, quoted-printable, base16, base32 or base64');
+        }
+
+        $this->properties = $properties;
+        $this->patternProperties = $patternProperties;
+        $this->additionalProperties = $additionalProperties;
+        $this->unevaluatedProperties = $unevaluatedProperties;
+        $this->requiredProperties = $requiredProperties;
+        $this->propertyNames = $propertyNames;
+        $this->minProperties = $minProperties;
+        $this->maxProperties = $maxProperties;
+
+        if ($this->unevaluatedProperties !== null) {
+            throw new NotYetImplementedException("unevaluatedProperties is not yet implemented", ['#']);
+        }
     }
 
     /**
@@ -153,38 +336,14 @@ class Schema implements JsonSerializable
     {
         $decoded = is_array($json) ? $json : json_decode($json, true);
 
-        // TODO: can we have type both string and object and have then object properties?
-        $type = is_array($decoded['type']) ? array_filter($decoded['type'], fn ($el) => $el !== 'null')[0] : $decoded['type'];
-
-        // No type was specified, try to guess it from schema properties
-        if ($type === null) {
-            $keys = array_keys($decoded);
-
-            if (count(array_intersect(['items', 'prefixItems', 'contains', 'minContains', 'maxContains', 'minItems', 'maxItems', 'uniqueItems'], $keys)) > 0) {
-                $type = 'array';
-            } else if (count(array_intersect(['multipleOf', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'], $keys)) > 0) {
-                $type = 'number';
-            } else if (count(array_intersect(['properties', 'patternProperties', 'additionalProperties', 'unevaluatedProperties', 'requiredProperties', 'propertyNames', 'minProperties', 'maxProperties'], $keys)) > 0) {
-                $type = 'object';
-            } else if (count(array_intersect(['format', 'minLength', 'maxLength', 'pattern', 'contentEncoding', 'contentMediaType'], $keys)) > 0) {
-                $type = 'string';
-            }
+        $properties = isset($decoded['properties']) ? [] : null;
+        foreach ($decoded['properties'] ?? [] as $key => $schema) {
+            $properties[$key] = Schema::fromJson($schema);
         }
 
-        switch (strtolower($type ?? '')) {
-            case 'string':
-                return StringSchema::fromJson($json);
-            case 'array':
-                return ArraySchema::fromJson($json);
-            case 'boolean':
-                return BooleanSchema::fromJson($json);
-            case 'null':
-                return NullSchema::fromJson($json);
-            case 'number':
-            case 'integer':
-                return NumberSchema::fromJson($json);
-            case 'object':
-                return ObjectSchema::fromJson($json);
+        $patternProperties = isset($decoded['patternProperties']) ? [] : null;
+        foreach ($decoded['patternProperties'] ?? [] as $key => $schema) {
+            $patternProperties[$key] = Schema::fromJson($schema);
         }
 
         return new Schema(
@@ -205,6 +364,42 @@ class Schema implements JsonSerializable
             isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
             isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
             isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
+
+            // enumPattern
+            null,
+
+            is_array($decoded['items']) ? Schema::fromJson($decoded['items']) : $decoded['items'],
+            isset($decoded['prefixItems']) ? array_map(fn ($el) => Schema::fromJson($el), $decoded['prefixItems']) : null,
+            $decoded['additionalItems'],
+            isset($decoded['contains']) ? Schema::fromJson($decoded['contains']) : null,
+            $decoded['minContains'],
+            $decoded['maxContains'],
+            $decoded['minItems'],
+            $decoded['maxItems'],
+            $decoded['uniqueItems'],
+            is_array($decoded['unevaluatedItems']) ? Schema::fromJson($decoded['unevaluatedItems']) : $decoded['unevaluatedItems'],
+
+            $decoded['multipleOf'],
+            $decoded['minimum'],
+            $decoded['maximum'],
+            $decoded['exclusiveMinimum'],
+            $decoded['exclusiveMaximum'],
+
+            $decoded['format'],
+            $decoded['minLength'],
+            $decoded['maxLength'],
+            $decoded['pattern'],
+            $decoded['contentEncoding'],
+            $decoded['contentMediaType'],
+
+            $properties,
+            $patternProperties,
+            is_array($decoded['additionalProperties']) ? Schema::fromJson($decoded['additionalProperties']) : null,
+            is_array($decoded['unevaluatedProperties']) ? Schema::fromJson($decoded['unevaluatedProperties']) : null,
+            $decoded['requiredProperties'],
+            is_array($decoded['propertyNames']) ? StringSchema::fromJson($decoded['propertyNames']) : null,
+            $decoded['minProperties'],
+            $decoded['maxProperties'],
         );
     }
 
@@ -244,19 +439,48 @@ class Schema implements JsonSerializable
             $schema->resolveRef($root);
         }
 
+
+        if ($this->items instanceof Schema) {
+            $this->items->resolveRef($root);
+        }
+
+        foreach ($this->prefixItems ?? [] as $schema) {
+            $schema->resolveRef($root);
+        }
+
+        if ($this->contains instanceof Schema) {
+            $schema->resolveRef($root);
+        }
+
+
+        /**
+         * @var Schema $property
+         */
+        foreach ($this->properties ?? [] as $property) {
+            $property->resolveRef($root);
+        }
+
+        /**
+         * @var Schema $property
+         */
+        foreach ($this->patternProperties ?? [] as $property) {
+            $property->resolveRef($root);
+        }
+
+        if ($this->additionalProperties instanceof Schema) {
+            $this->additionalProperties->resolveRef($root);
+        }
+
+        if ($this->unevaluatedProperties instanceof Schema) {
+            $this->unevaluatedProperties->resolveRef($root);
+        }
+
+        if ($this->propertyNames !== null) {
+            $this->propertyNames->resolveRef($root);
+        }
+
         return $this;
     }
-
-    // Json Schema types => PHP types
-    private const typeCorrespondance = [
-        'string' => 'string',
-        'number' => 'double',
-        'integer' => 'integer',
-        'object' => 'object',
-        'array' => 'array',
-        'boolean' => 'boolean',
-        'null' => 'NULL',
-    ];
 
     public static function validateInstance(Model $value): object
     {
@@ -279,28 +503,44 @@ class Schema implements JsonSerializable
     {
         $root = $root ?? $this;
 
-        if (is_array($this->type)) {
-            $match = false;
-            foreach ($this->type as $type) {
-                if (self::typeCorrespondance[$type->value] == gettype($value)) {
-                    $match = true;
-                    break;
-                }
-            }
+        $this->validateCommon($value, $root, $path);
+        $this->validateArray($value, $root, $path);
+        $this->validateNumber($value, $path);
+        $this->validateString($value, $path);
+        $this->validateObject($value, $root, $path);
+    }
 
-            if ($match) {
-                throw new InvalidSchemaValueException("Expected type to be one of " . implode(",", $this->type) . ", got " . gettype($value), $path);
-            }
-        } else if ($this->type !== null && self::typeCorrespondance[$this->type] !== gettype($value)) {
-            if ($this->enum !== null) {
-                if (!in_array($value, $this->enum)) {
-                    throw new InvalidSchemaValueException("Expected type " . self::typeCorrespondance[$this->type] . " got " . gettype($value), $path);
-                }
-            } else {
-                throw new InvalidSchemaValueException("Expected type " . self::typeCorrespondance[$this->type] . " got " . gettype($value), $path);
-            }
+    private static function is_associative($array): bool
+    {
+        if (!is_array($array)) {
+            return false;
         }
 
+        if ([] === $array) {
+            return false;
+        }
+
+        if (array_keys($array) !== range(0, count($array) - 1)) {
+            return true;
+        }
+
+        // Dealing with a Sequential array
+        return false;
+    }
+
+    private static function validateRelativeUri(string $url): bool
+    {
+        if (parse_url($url, PHP_URL_SCHEME) != '') {
+            // URL is not relative
+            return !(filter_var($url, FILTER_VALIDATE_URL) === false);
+        } else {
+            // PHP filter_var does not support relative urls, so we simulate a full URL
+            return !(filter_var('http://www.example.com/' . ltrim($url, '/'), FILTER_VALIDATE_URL) === false);
+        }
+    }
+
+    private function validateCommon($value, ?Schema $root = null, array $path = ['#']): void
+    {
         if ($this->enum !== null && !in_array($value instanceof JsonSerializable ? $value->jsonSerialize() : $value, $this->enum, true)) {
             throw new InvalidSchemaValueException("Expected value within [" . implode(', ', $this->enum) . '] got `' . $value . '`', $path);
         }
@@ -326,7 +566,7 @@ class Schema implements JsonSerializable
                         throw new InvalidArgumentException('Can\'t resolve $ref ' . ($this->resolvedRef ?? $this->ref ?? ''));
                     }
                 } else {
-                    throw new NotYetImplementedException('Reference other than #/$defs/<name> are not yet implemented: ' . ($this->resolvedRef ?? $this->ref ?? ''));
+                    throw new NotYetImplementedException('Reference other than #/$defs/<name> are not yet implemented: ' . ($this->resolvedRef ?? $this->ref ?? ''), $path);
                 }
             }
         }
@@ -393,6 +633,361 @@ class Schema implements JsonSerializable
             } catch (InvalidSchemaValueException $_) {
                 // Good
             }
+        }
+    }
+
+    private function validateArray($value, ?Schema $root = null, array $path = ['#']): void
+    {
+        if ((!is_array($value) || self::is_associative($value))) {
+            if ($this->type === 'array') {
+                // The schema specifically ask for an array, we throw
+                throw new InvalidSchemaValueException("Expected type to be array, got " . gettype($value), $path);
+            }
+
+            // Schema allows data to be something else, just ignore array validations
+            return;
+        }
+
+        if ($this->contains !== null) {
+            $contains = false;
+            foreach ($value as $i => $item) {
+                try {
+                    $this->contains->validate($item, $root, [...$path, 'contains', $i]);
+
+                    $contains = true;
+
+                    break;
+                } catch (InvalidSchemaValueException $_) {
+                }
+            }
+
+            if (!$contains) {
+                throw new InvalidSchemaValueException('Expected at least one item to validate against:\n' . json_encode($this->contains, JSON_PRETTY_PRINT), $path);
+            }
+
+            if ($this->minContains !== null && count($value) < $this->minContains) {
+                throw new InvalidSchemaValueException("Expected at least ' . $this->minContains . ' to validate against `contains` elements got " . count($value), $path);
+            }
+
+            if ($this->maxContains !== null && count($value) > $this->maxContains) {
+                throw new InvalidSchemaValueException("Expected at most ' . $this->maxContains . ' to validate against `contains` elements got " . count($value), $path);
+            }
+        }
+
+        if ($this->minItems !== null && count($value) < $this->minItems) {
+            throw new InvalidSchemaValueException("Expected at least ' . $this->minItems . ' elements got " . count($value), $path);
+        }
+
+        if ($this->maxItems !== null && count($value) > $this->maxItems) {
+            throw new InvalidSchemaValueException("Expected at most ' . $this->maxItems . ' elements got " . count($value), $path);
+        }
+
+        if ($this->uniqueItems === true) {
+            $items = [];
+            foreach ($value as $item) {
+                if (self::is_associative($item)) {
+                    ksort($item);
+                }
+
+                if (in_array($item, $items, true)) {
+                    throw new InvalidSchemaValueException('Expected unique items', $path);
+                }
+
+                $items[] = $item;
+            }
+        }
+
+        if ($this->prefixItems !== null && count($this->prefixItems) > 0) {
+            foreach ($this->prefixItems as $i => $prefixItem) {
+                $prefixItem->validate($value[$i], $root, [...$path, 'prefixItems', $i]);
+            }
+        }
+
+        if ($this->items !== null) {
+            if ($this->items instanceof Schema) {
+                foreach ($value as $i => $item) {
+                    $this->items->validate($item, $root, [...$path, 'items', $i]);
+                }
+            } else if (is_bool($this->items)) {
+                throw new NotYetImplementedException('items as boolean is not yet implemented', $path);
+            }
+        }
+
+        if ($this->unevaluatedItems !== null) {
+            throw new NotYetImplementedException('unevaluatedItems is not yet implemented', $path);
+        }
+    }
+
+    private function validateNumber($value, array $path = ['#']): void
+    {
+        if (!is_numeric($value)) {
+            if ($this->type === 'number' || $this->type === 'integer') {
+                // The schema specifically ask for an array, we throw
+                throw new InvalidSchemaValueException("Expected type to be ' . $this->type . ', got " . gettype($value), $path);
+            }
+
+            // Schema allows data to be something else, just ignore numeric validations
+            return;
+        }
+
+        if (!is_int($value) && $this->type === 'integer') {
+            throw new InvalidSchemaValueException("Expected an integer got " . gettype($value), $path);
+        }
+
+        if (!is_double($value) && $this->type == 'number') {
+            throw new InvalidSchemaValueException("Expected a number got " . gettype($value), $path);
+        }
+
+        if ($this->multipleOf !== null && $value % $this->multipleOf !== 0) {
+            throw new InvalidSchemaValueException("Expected a multiple of " . $this->multipleOf, $path);
+        }
+
+        if ($this->minimum !== null && $value < $this->minimum) {
+            throw new InvalidSchemaValueException("Expected value to be less or equal to " . $this->minimum, $path);
+        }
+
+        if ($this->maximum !== null && $value > $this->maximum) {
+            throw new InvalidSchemaValueException("Expected value to be greater or equal to " . $this->maximum, $path);
+        }
+
+        if ($this->exclusiveMinimum !== null && $value <= $this->exclusiveMinimum) {
+            throw new InvalidSchemaValueException("Expected value to be less than " . $this->exclusiveMinimum, $path);
+        }
+
+        if ($this->exclusiveMaximum !== null && $value >= $this->exclusiveMaximum) {
+            throw new InvalidSchemaValueException("Expected value to be greather than " . $this->exclusiveMaximum, $path);
+        }
+
+        if ($this->maxLength !== null && strlen($value) > $this->maxLength) {
+            throw new InvalidSchemaValueException('Expected at most ' . $this->maxLength . ' characters long, got ' . strlen($value), $path);
+        }
+
+        if ($this->minLength !== null && strlen($value) < $this->minLength) {
+            throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . strlen($value), $path);
+        }
+    }
+
+    private function validateString($value, array $path = ['#']): void
+    {
+        if (!is_string($value)) {
+            if ($this->type === 'string') {
+                // The schema specifically ask for an array, we throw
+                throw new InvalidSchemaValueException("Expected type to be ' . $this->type . ', got " . gettype($value), $path);
+            }
+
+            // Schema allows data to be something else, just ignore string validations
+            return;
+        }
+
+        // Add regex delimiters /.../ if missing
+        if ($this->pattern !== null) {
+            $pattern = preg_match('/\/[^\/]+\//', $this->pattern) === 0 ? '/' . $this->pattern . '/' : $this->pattern;
+            if (preg_match($pattern, $value) !== 1) {
+                throw new InvalidSchemaValueException('Expected value to match ' . $this->pattern . ' got `' . $value . '`', $path);
+            }
+        }
+
+        $decodedValue = $value;
+        if ($this->contentEncoding !== null) {
+            switch ($this->contentEncoding) {
+                case '7bit':
+                    throw new NotYetImplementedException('7bit decoding not yet implemented', $path);
+                    break;
+                case '8bit':
+                    throw new NotYetImplementedException('8bit decoding not yet implemented', $path);
+                    break;
+                case 'binary':
+                    throw new NotYetImplementedException('binary decoding not yet implemented', $path);
+                    break;
+                case 'quoted-printable':
+                    $decodedValue = quoted_printable_decode($value);
+                    break;
+                case 'base16':
+                    throw new NotYetImplementedException('base16 decoding not yet implemented', $path);
+                    break;
+                case 'base32':
+                    throw new NotYetImplementedException('base32 decoding not yet implemented', $path);
+                    break;
+                case 'base64':
+                    $decodedValue = base64_decode($value);
+                    break;
+            }
+        }
+
+        if ($this->contentMediaType !== null) {
+            $tmpfile = tempnam(sys_get_temp_dir(), 'jsonschemavalidation');
+            file_put_contents($tmpfile, $decodedValue);
+            $mimeType = mime_content_type($tmpfile);
+            unlink($tmpfile);
+
+            // https://github.com/json-schema-org/JSON-Schema-Test-Suite/blob/master/tests/draft2020-12/content.json#L13-L17
+            if ($mimeType === 'text/plain' && $this->contentMediaType === 'application/json') {
+                $mimeType = 'application/json';
+            }
+
+            if ($mimeType !== false && $mimeType !== $this->contentMediaType) {
+                throw new InvalidSchemaValueException('Expected content mime type to be ' . $this->contentMediaType . ' got ' . $mimeType, $path);
+            }
+        }
+
+        if ($this->format !== null) {
+            switch ($this->format) {
+                case self::FORMAT_DATETIME:
+                    if (!preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+\d\d:\d+$/', $value)) {
+                        throw new InvalidSchemaValueException('Expected to be date-time got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_TIME:
+                    if (!preg_match('/^\d\d:\d\d:\d\d\+\d\d:\d+$/', $value)) {
+                        throw new InvalidSchemaValueException('Expected to be time got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_DATE:
+                    if (!preg_match('/^\d{4}-\d\d-\d\d$/', $value)) {
+                        throw new InvalidSchemaValueException('Expected to be date got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_DURATION:
+                    if (!preg_match(self::DURATION_REGEX, $value)) {
+                        throw new InvalidSchemaValueException('Expected to be duration got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_EMAIL:
+                case self::FORMAT_IDNEMAIL:
+                    if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                        throw new InvalidSchemaValueException('Expected to be email got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_HOSTNAME:
+                case self::FORMAT_IDNHOSTNAME:
+                    if (!filter_var($value, FILTER_VALIDATE_DOMAIN)) {
+                        throw new InvalidSchemaValueException('Expected to be hostname got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_IPV4:
+                    if (!preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/', $value)) {
+                        throw new InvalidSchemaValueException('Expected to be ipv4 got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_IPV6:
+                    if (!preg_match('/^[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}$/', $value)) {
+                        throw new InvalidSchemaValueException('Expected to be ipv6 got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_UUID:
+                    if (!preg_match('/^[a-f0-9]{8}\-[a-f0-9]{4}\-4[a-f0-9]{3}\-(8|9|a|b)[a-f0-9]{3}\-[a-f0-9]{12}$/', $value)) {
+                        throw new InvalidSchemaValueException('Expected to be uuid got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_URI:
+                case self::FORMAT_IRI:
+                    if (!filter_var($value, FILTER_VALIDATE_URL)) {
+                        throw new InvalidSchemaValueException('Expected to be uri got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_URIREFERENCE:
+                case self::FORMAT_IRIREFERENCE:
+                    if (!self::validateRelativeUri($value)) {
+                        throw new InvalidSchemaValueException('Expected to be uri-reference got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_URITEMPLATE:
+                    if (!preg_match('/^$/', $value)) {
+                        throw new InvalidSchemaValueException('Expected to be uri-template got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_JSONPOINTER:
+                case self::FORMAT_RELATIVEJSONPOINTER: // TODO
+                    if (!preg_match('/^\/?([^\/]+\/)*[^\/]+$/', $value)) {
+                        throw new InvalidSchemaValueException('Expected to be json-pointer got `' . $value . '`', $path);
+                    }
+                    break;
+                case self::FORMAT_REGEX:
+                    if (!filter_var($value, FILTER_VALIDATE_REGEXP)) {
+                        throw new InvalidSchemaValueException('Expected to be email got `' . $value . '`', $path);
+                    }
+                    break;
+            }
+        }
+    }
+
+    private function validateObject($value, ?Schema $root = null, array $path = ['#']): void
+    {
+        if (!is_object($value)) {
+            if ($this->type === 'object') {
+                // The schema specifically ask for an array, we throw
+                throw new InvalidSchemaValueException("Expected type to be ' . $this->type . ', got " . gettype($value), $path);
+            }
+
+            // Schema allows data to be something else, just ignore numeric validations
+            return;
+        }
+
+        $root = $root ?? $this;
+        $reflection = new ReflectionClass(get_class($value));
+
+        if ($this->properties !== null && count($this->properties) > 0) {
+            foreach ($this->properties as $key => $schema) {
+                try {
+                    $schema->validate($reflection->getProperty($key)->getValue($value), $root, [...$path, $key]);
+                } catch (ReflectionException $_) {
+                    throw new InvalidSchemaValueException("Value has no property " . $key, $path);
+                }
+            }
+        }
+
+        if ($this->patternProperties !== null && count($this->patternProperties) > 0) {
+            foreach ($this->patternProperties as $pattern => $schema) {
+                foreach ($reflection->getProperties() as $property) {
+                    if (preg_match($pattern, $property->getName())) {
+                        $schema->validate($property->getValue(), $root, [...$path, $property->getName()]);
+                    }
+                }
+            }
+        }
+
+        if ($this->additionalProperties !== null) {
+            if (is_bool($this->additionalProperties) && !$this->additionalProperties) {
+                foreach ($reflection->getProperties() as $property) {
+                    if (!isset($this->properties[$property->getName()])) {
+                        throw new InvalidSchemaValueException("Additionnal property " . $property->getName() . " is not allowed", $path);
+                    }
+                }
+            } else if ($this->additionalProperties instanceof Schema) {
+                foreach ($reflection->getProperties() as $property) {
+                    if (!isset($this->properties[$property->getName()])) {
+                        $this->additionalProperties->validate($property->getValue(), $root, [...$path, $property->getName()]);
+                    }
+                }
+            }
+        }
+
+        if ($this->unevaluatedProperties !== null) {
+            throw new NotYetImplementedException("unevaluatedProperties is not yet implemented", $path);
+        }
+
+        if ($this->requiredProperties !== null) {
+            foreach ($this->requiredProperties as $property) {
+                try {
+                    $reflection->getProperty($property);
+                } catch (ReflectionException $_) {
+                    throw new InvalidSchemaValueException("Property " . $property . " is required", $path);
+                }
+            }
+        }
+
+        if ($this->propertyNames !== null) {
+            foreach ($reflection->getProperties() as $property) {
+                $this->propertyNames->validate($property->getName(), $root, [...$path, $property->getName()]);
+            }
+        }
+
+        if ($this->minProperties !== null && count($reflection->getProperties()) < $this->minProperties) {
+            throw new InvalidSchemaValueException("Should have at least " . $this->minProperties . " properties got " . count($reflection->getProperties()), $path);
+        }
+
+        if ($this->maxProperties !== null && count($reflection->getProperties()) > $this->maxProperties) {
+            throw new InvalidSchemaValueException("Should have at most " . $this->maxProperties . " properties got " . count($reflection->getProperties()), $path);
         }
     }
 
@@ -597,6 +1192,20 @@ class Schema implements JsonSerializable
 
     public function jsonSerialize(): array
     {
+        $properties = null;
+        if ($this->properties !== null) {
+            foreach ($this->properties as $name => $property) {
+                $properties[$name] = $property->jsonSerialize();
+            }
+        }
+
+        $patternProperties = null;
+        if ($this->patternProperties !== null) {
+            foreach ($this->patternProperties as $name => $property) {
+                $patternProperties[$name] = $property->jsonSerialize();
+            }
+        }
+
         return ($this->type !== null ? [
             'type' => $this->type
         ] : [])
@@ -615,6 +1224,42 @@ class Schema implements JsonSerializable
             + ($this->allOf !== null ? ['allOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->allOf)] : [])
             + ($this->oneOf !== null ? ['oneOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->oneOf)] : [])
             + ($this->anyOf !== null ? ['anyOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->anyOf)] : [])
-            + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : []);
+            + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : [])
+            + ($this->items !== null ? ['items' => $this->items->jsonSerialize()] : [])
+            + ($this->prefixItems !== null ? ['prefixItems' => $this->prefixItems] : [])
+            + ($this->contains !== null ? ['contains' => $this->contains->jsonSerialize()] : [])
+            + ($this->minContains !== null ? ['minContains' => $this->minContains] : [])
+            + ($this->maxContains !== null ? ['maxContains' => $this->maxContains] : [])
+            + ($this->uniqueItems !== null ? ['uniqueItems' => $this->uniqueItems] : [])
+            + ($this->unevaluatedItems !== null ? ['unevaluatedItems' => $this->unevaluatedItems->jsonSerialize()] : [])
+            + ($this->multipleOf !== null ? ['multipleOf' => $this->multipleOf] : [])
+            + ($this->minimum !== null ? ['minimum' => $this->minimum] : [])
+            + ($this->maximum !== null ? ['maximum' => $this->maximum] : [])
+            + ($this->exclusiveMinimum !== null ? ['exclusiveMinimum' => $this->exclusiveMinimum] : [])
+            + ($this->exclusiveMaximum !== null ? ['exclusiveMaximum' => $this->exclusiveMaximum] : [])
+            + ($this->format !== null ? ['format' => $this->format] : [])
+            + ($this->minLength !== null ? ['minLength' => $this->minLength] : [])
+            + ($this->maxLength !== null ? ['maxLength' => $this->maxLength] : [])
+            + ($this->pattern !== null ? ['pattern' => $this->pattern] : [])
+            + ($this->contentEncoding !== null ? ['contentEncoding' => $this->contentEncoding] : [])
+            + ($this->contentMediaType !== null ? ['contentMediaType' => $this->contentMediaType] : [])
+            + ($properties !== null ? ['properties' => $properties] : [])
+            + ($patternProperties !== null ? ['pattern$patternProperties' => $patternProperties] : [])
+            + ($this->additionalProperties !== null ?
+                [
+                    'additionalProperties' => $this->additionalProperties instanceof Schema ?
+                        $this->additionalProperties->jsonSerialize()
+                        : $this->additionalProperties
+                ] : [])
+            + ($this->unevaluatedProperties !== null ?
+                [
+                    'unevaluatedProperties' => $this->unevaluatedProperties instanceof Schema ?
+                        $this->unevaluatedProperties->jsonSerialize()
+                        : $this->unevaluatedProperties
+                ] : [])
+            + ($this->requiredProperties !== null ? ['requiredProperties' => $this->requiredProperties] : [])
+            + ($this->propertyNames !== null ? ['propertyNames' => $this->propertyNames] : [])
+            + ($this->minProperties !== null ? ['minProperties' => $this->minProperties] : [])
+            + ($this->maxProperties !== null ? ['maxProperties' => $this->maxProperties] : []);
     }
 }
