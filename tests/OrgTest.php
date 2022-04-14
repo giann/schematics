@@ -93,7 +93,7 @@ final class OrgTest extends TestCase
                     }
                 }
 
-                echo PHP_EOL . 'Passed ' . ($testCount - $failedCount) . '/' . $testCount . ' tests' . PHP_EOL;
+                echo PHP_EOL . $fileinfo->getFilename() . ': passed ' . ($testCount - $failedCount) . '/' . $testCount . ' tests' . PHP_EOL;
             }
         }
 

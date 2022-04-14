@@ -570,6 +570,26 @@ class Schema implements JsonSerializable
             // stupid php retains map keys order
             ksort($a);
             ksort($b);
+        } else if (is_array($a) && is_array($b)) {
+            if ($a === $b) {
+                return true;
+            }
+
+            foreach ($a as $element) {
+                if (!self::contains($element, $b)) {
+                    return false;
+                }
+            }
+
+            foreach ($b as $element) {
+                if (!self::contains($element, $a)) {
+                    return false;
+                }
+            }
+
+            return true;
+        } else if (is_numeric($a) && is_numeric($b)) {
+            return $a == $b;
         }
 
         return $a === $b;
@@ -655,7 +675,7 @@ class Schema implements JsonSerializable
             }
         }
 
-        if (!($this->const instanceof Absent) && self::equal($this->const, $value)) {
+        if (!($this->const instanceof Absent) && !self::equal($this->const, $value)) {
             throw new InvalidSchemaValueException(
                 "Expected value to be the constant\n"
                     . json_encode($this->const, JSON_PRETTY_PRINT)
