@@ -363,7 +363,7 @@ class Schema implements JsonSerializable
             $decoded['id'],
             $decoded['$anchor'],
             $decoded['ref'],
-            isset($decoded['$defs']) ? array_map(fn ($def) => self::fromJson($def), $decoded['$defs']) : null,
+            isset($decoded['$defs']) ? array_map(fn ($def) => self::fromJson($def), (array)$decoded['$defs']) : null,
             $decoded['title'],
             $decoded['description'],
             $decoded['default'],
@@ -492,6 +492,19 @@ class Schema implements JsonSerializable
         }
 
         return $this;
+    }
+
+    private function acceptsAll(): bool
+    {
+        return $this->unilateral === true
+            || ($this->not !== null && $this->not->rejectsAll())
+            || array_filter((array)$this, fn ($el) => $el !== null) === []; // Schema specifies nothing, everything goes even absent data
+    }
+
+    private function rejectsAll(): bool
+    {
+        return $this->unilateral === false
+            || ($this->not !== null && $this->not->acceptsAll());
     }
 
     public static function validateInstance(Model $value): object
@@ -1074,7 +1087,9 @@ class Schema implements JsonSerializable
                 try {
                     $schema->validate($reflection->getProperty($key)->getValue($value), $root, [...$path, $key]);
                 } catch (ReflectionException $_) {
-                    throw new InvalidSchemaValueException("Value has no property " . $key, $path);
+                    if ($schema->acceptsAll()) {
+                        throw new InvalidSchemaValueException("Value has no property " . $key, $path);
+                    }
                 }
             }
         }
