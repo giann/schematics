@@ -15,6 +15,7 @@ use Doctrine\Common\Annotations\AnnotationReader;
 use Doctrine\Common\Annotations\Annotation;
 use Doctrine\Common\Annotations\Annotation\NamedArgumentConstructor;
 use Doctrine\Common\Annotations\Annotation\Target;
+use ReflectionObject;
 use Throwable;
 
 // Use to differenciate a property with a null value from the absence of the property. ex: { "const": null }
@@ -899,14 +900,6 @@ class Schema implements JsonSerializable
         if ($this->exclusiveMaximum !== null && $value >= $this->exclusiveMaximum) {
             throw new InvalidSchemaValueException("Expected value to be greather than " . $this->exclusiveMaximum, $path);
         }
-
-        if ($this->maxLength !== null && strlen($value) > $this->maxLength) {
-            throw new InvalidSchemaValueException('Expected at most ' . $this->maxLength . ' characters long, got ' . strlen($value), $path);
-        }
-
-        if ($this->minLength !== null && strlen($value) < $this->minLength) {
-            throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . strlen($value), $path);
-        }
     }
 
     private function validateString($value, array $path = ['#']): void
@@ -927,6 +920,14 @@ class Schema implements JsonSerializable
             if (preg_match($pattern, $value) !== 1) {
                 throw new InvalidSchemaValueException('Expected value to match ' . $this->pattern . ' got `' . $value . '`', $path);
             }
+        }
+
+        if ($this->maxLength !== null && strlen($value) > $this->maxLength) {
+            throw new InvalidSchemaValueException('Expected at most ' . $this->maxLength . ' characters long, got ' . strlen($value), $path);
+        }
+
+        if ($this->minLength !== null && strlen($value) < $this->minLength) {
+            throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . strlen($value), $path);
         }
 
         $decodedValue = $value;
@@ -1066,7 +1067,7 @@ class Schema implements JsonSerializable
         }
 
         $root = $root ?? $this;
-        $reflection = new ReflectionClass(get_class($value));
+        $reflection = new ReflectionObject($value);
 
         if ($this->properties !== null && count($this->properties) > 0) {
             foreach ($this->properties as $key => $schema) {
