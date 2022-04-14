@@ -34,14 +34,14 @@ final class OrgTest extends TestCase
                 $testCount = 0;
                 $failedCount = 0;
 
-                $tests = json_decode(file_get_contents($fileinfo->getPathName()), true);
+                $tests = json_decode(file_get_contents($fileinfo->getPathName()));
 
                 foreach ($tests as $test) {
-                    $cases = $test['tests'];
-                    $groupDesc = $test['description'];
+                    $cases = $test->tests;
+                    $groupDesc = $test->description;
 
                     try {
-                        $schema = Schema::fromJson($test['schema']);
+                        $schema = Schema::fromJson($test->schema);
                     } catch (Throwable $e) {
                         $failedCount++;
                         $generalFailedCount++;
@@ -58,11 +58,11 @@ final class OrgTest extends TestCase
                         $testCount++;
                         $generalTestCount++;
                         try {
-                            $message = $fileinfo->getFilename() . ' | ' . $groupDesc . ': ' . $case['description'];
+                            $message = $fileinfo->getFilename() . ' | ' . $groupDesc . ': ' . $case->description;
 
-                            $schema->validate($case['data']);
+                            $schema->validate($case->data);
 
-                            if (!$case['valid']) {
+                            if (!$case->valid) {
                                 $failedCount++;
                                 $generalFailedCount++;
 
@@ -73,7 +73,7 @@ final class OrgTest extends TestCase
                             }
                         } catch (Throwable $e) {
                             if ($e instanceof InvalidSchemaValueException || $e instanceof NotYetImplementedException) {
-                                if ($case['valid']) {
+                                if ($case->valid) {
                                     $failedCount++;
                                     $generalFailedCount++;
 
