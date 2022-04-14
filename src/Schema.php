@@ -333,7 +333,7 @@ class Schema implements JsonSerializable
     }
 
     /**
-     * @param string|array|bool $json
+     * @param string|array|bool|object $json
      * @return Schema
      */
     public static function fromJson($json): Schema
@@ -345,7 +345,7 @@ class Schema implements JsonSerializable
             return $schema;
         }
 
-        $decoded = is_array($json) ? $json : json_decode($json, true);
+        $decoded = !is_string($json) ? (array)$json : json_decode($json, true);
 
         $properties = isset($decoded['properties']) ? [] : null;
         foreach ($decoded['properties'] ?? [] as $key => $schema) {
@@ -546,6 +546,47 @@ class Schema implements JsonSerializable
         return false;
     }
 
+    private static function equal($a, $b): bool
+    {
+        // Unlike php, json schema expect two object to be equal but its properties to be strictly equal
+        if (is_object($a) && is_object($b)) {
+            foreach ($a as $key => $value) {
+                if (
+                    !property_exists($b, $key)
+                    || !self::equal($value, $b->{$key})
+                ) {
+                    return false;
+                }
+            }
+
+            foreach ($b as $key => $value) {
+                if (!property_exists($a, $key)) {
+                    return false;
+                }
+            }
+
+            return true;
+        } else if (self::is_associative($a) && self::is_associative($b)) {
+            // stupid php retains map keys order
+            ksort($a);
+            ksort($b);
+        }
+
+        return $a === $b;
+    }
+
+    // in_array but with json schema semantics
+    private static function contains($needle, array $haystack): bool
+    {
+        foreach ($haystack as $element) {
+            if (self::equal($needle, $element)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static function validateRelativeUri(string $url): bool
     {
         if (parse_url($url, PHP_URL_SCHEME) != '') {
@@ -559,19 +600,69 @@ class Schema implements JsonSerializable
 
     private function validateCommon($value, ?Schema $root = null, array $path = ['#']): void
     {
-        if (!($this->const instanceof Absent)) {
-            if (self::is_associative($this->const)) ksort($this->const);
-            if (self::is_associative($value)) ksort($this->$value);
-
-            if ($value !== $this->const) {
-                throw new InvalidSchemaValueException(
-                    "Expected value to be the constant\n"
-                        . json_encode($this->const, JSON_PRETTY_PRINT)
-                        . "\ngot:\n"
-                        . json_encode($value, JSON_PRETTY_PRINT),
-                    $path,
-                );
+        // Here we only validate when multiple types, the other validate method will handle the case when there's only one type
+        if (count((is_array($this->type) ? $this->type : null) ?? []) > 0) {
+            $validates = false;
+            foreach ($this->type as $type) {
+                switch ($type) {
+                    case 'string':
+                        if (is_string($value)) {
+                            $validates = true;
+                            break;
+                        }
+                        break;
+                    case 'number':
+                        if (is_numeric($value)) {
+                            $validates = true;
+                            break;
+                        }
+                        break;
+                    case 'integer':
+                        if (is_int($value)) {
+                            $validates = true;
+                            break;
+                        }
+                        break;
+                    case 'array':
+                        if (is_array($value) && !self::is_associative($value)) {
+                            $validates = true;
+                            break;
+                        }
+                        break;
+                    case 'object':
+                        if (is_object($value)) {
+                            $validates = true;
+                            break;
+                        }
+                        break;
+                    case 'boolean':
+                        if (is_bool($value)) {
+                            $validates = true;
+                            break;
+                        }
+                        break;
+                    case 'null':
+                        if ($value === null) {
+                            $validates = true;
+                            break;
+                        }
+                        break;
+                }
             }
+
+            if (!$validates) {
+                throw new InvalidSchemaValueException('Expected type to be one of [' . implode(', ', $this->type) . '] got ' . gettype($value), $path);
+            }
+        }
+
+        if (!($this->const instanceof Absent) && self::equal($this->const, $value)) {
+            throw new InvalidSchemaValueException(
+                "Expected value to be the constant\n"
+                    . json_encode($this->const, JSON_PRETTY_PRINT)
+                    . "\ngot:\n"
+                    . json_encode($value, JSON_PRETTY_PRINT),
+                $path,
+            );
         }
 
         if ($this->enum !== null && !in_array($value instanceof JsonSerializable ? $value->jsonSerialize() : $value, $this->enum, true)) {
@@ -659,12 +750,17 @@ class Schema implements JsonSerializable
         }
 
         if ($this->not !== null) {
+            $validated = false;
             try {
                 $this->not->validate($value, $root, [...$path, 'not']);
 
-                throw new InvalidSchemaValueException("Can't validate against: " . json_encode($this->not), $path);
-            } catch (InvalidSchemaValueException $_) {
+                $validated = true;
+            } catch (InvalidSchemaValueException $e) {
                 // Good
+            }
+
+            if ($validated) {
+                throw new InvalidSchemaValueException("Can't validate against: " . json_encode($this->not), $path);
             }
         }
     }
@@ -718,11 +814,7 @@ class Schema implements JsonSerializable
         if ($this->uniqueItems === true) {
             $items = [];
             foreach ($value as $item) {
-                if (self::is_associative($item)) {
-                    ksort($item);
-                }
-
-                if (in_array($item, $items, true)) {
+                if (self::contains($item, $items)) {
                     throw new InvalidSchemaValueException('Expected unique items', $path);
                 }
 
@@ -753,7 +845,7 @@ class Schema implements JsonSerializable
         if (!is_numeric($value)) {
             if ($this->type === 'number' || $this->type === 'integer') {
                 // The schema specifically ask for an array, we throw
-                throw new InvalidSchemaValueException("Expected type to be ' . $this->type . ', got " . gettype($value), $path);
+                throw new InvalidSchemaValueException('Expected type to be ' . $this->type . ', got ' . gettype($value), $path);
             }
 
             // Schema allows data to be something else, just ignore numeric validations
