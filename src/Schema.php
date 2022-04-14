@@ -265,7 +265,7 @@ class Schema implements JsonSerializable
         ?array $patternProperties = null,
         $additionalProperties = null,
         $unevaluatedProperties = null,
-        ?array $requiredProperties = null,
+        ?array $required = null,
         ?Schema $propertyNames = null,
         ?int $minProperties = null,
         ?int $maxProperties = null
@@ -323,7 +323,7 @@ class Schema implements JsonSerializable
         $this->patternProperties = $patternProperties;
         $this->additionalProperties = $additionalProperties;
         $this->unevaluatedProperties = $unevaluatedProperties;
-        $this->requiredProperties = $requiredProperties;
+        $this->required = $required;
         $this->propertyNames = $propertyNames;
         $this->minProperties = $minProperties;
         $this->maxProperties = $maxProperties;
@@ -407,7 +407,7 @@ class Schema implements JsonSerializable
             $patternProperties,
             isset($decoded['additionalProperties']) ? Schema::fromJson($decoded['additionalProperties']) : null,
             isset($decoded['unevaluatedProperties']) ? Schema::fromJson($decoded['unevaluatedProperties']) : null,
-            $decoded['requiredProperties'],
+            $decoded['required'],
             isset($decoded['propertyNames']) ? StringSchema::fromJson($decoded['propertyNames']) : null,
             $decoded['minProperties'],
             $decoded['maxProperties'],
@@ -1124,8 +1124,8 @@ class Schema implements JsonSerializable
             throw new NotYetImplementedException("unevaluatedProperties is not yet implemented", $path);
         }
 
-        if ($this->requiredProperties !== null) {
-            foreach ($this->requiredProperties as $property) {
+        if ($this->required !== null) {
+            foreach ($this->required as $property) {
                 try {
                     $reflection->getProperty($property);
                 } catch (ReflectionException $_) {
@@ -1415,7 +1415,7 @@ class Schema implements JsonSerializable
                         $this->unevaluatedProperties->jsonSerialize()
                         : $this->unevaluatedProperties
                 ] : [])
-            + ($this->requiredProperties !== null ? ['requiredProperties' => $this->requiredProperties] : [])
+            + ($this->required !== null ? ['required' => $this->required] : [])
             + ($this->propertyNames !== null ? ['propertyNames' => $this->propertyNames] : [])
             + ($this->minProperties !== null ? ['minProperties' => $this->minProperties] : [])
             + ($this->maxProperties !== null ? ['maxProperties' => $this->maxProperties] : []);
