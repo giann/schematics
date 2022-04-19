@@ -976,12 +976,12 @@ class Schema implements JsonSerializable
             }
         }
 
-        if ($this->maxLength !== null && strlen($value) > $this->maxLength) {
-            throw new InvalidSchemaValueException('Expected at most ' . $this->maxLength . ' characters long, got ' . strlen($value), $path);
+        if ($this->maxLength !== null && mb_strlen($value, 'UTF-8') > $this->maxLength) {
+            throw new InvalidSchemaValueException('Expected at most ' . $this->maxLength . ' characters long, got ' . mb_strlen($value, 'UTF-8'), $path);
         }
 
-        if ($this->minLength !== null && strlen($value) < $this->minLength) {
-            throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . strlen($value), $path);
+        if ($this->minLength !== null && mb_strlen($value, 'UTF-8') < $this->minLength) {
+            throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . mb_strlen($value, 'UTF-8'), $path);
         }
 
         $decodedValue = $value;
