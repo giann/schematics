@@ -929,16 +929,12 @@ class Schema implements JsonSerializable
             foreach (array_slice($value, count($this->prefixItems ?? [])) as $i => $item) {
                 $this->items->validate($item, $root, [...$path, 'items', $i]);
             }
+        } else if ($this->unevaluatedItems !== null) {
+            // TODO: this is not complete
+            foreach (array_slice($value, count($this->prefixItems ?? [])) as $i => $item) {
+                $this->unevaluatedItems->validate($item, $root, [...$path, 'unevaluatedItems', $i]);
+            }
         }
-
-        // $unevaluatedOffset = count(array_slice($this->prefixItems, 0, count($value)))
-        //     + count(array_slice($value, count($this->prefixItems ?? [])));
-
-        // if ($this->unevaluatedItems !== null && $unevaluatedOffset < count($value)) {
-        //     foreach (array_slice($value, $unevaluatedOffset) as $i => $item) {
-        //         $this->unevaluatedItems->validate($item, $root, [...$path, 'unevaluatedItems', $i]);
-        //     }
-        // }
     }
 
     private function validateNumber($value, array $path = ['#']): void
