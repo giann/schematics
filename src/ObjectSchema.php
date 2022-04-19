@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Giann\Schematics;
 
-use ReflectionClass;
-use ReflectionException;
-
 //#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]
 /**
  * @Annotation
