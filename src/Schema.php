@@ -114,7 +114,6 @@ class Schema implements JsonSerializable
      */
     public ?array $anyOf = null;
     public ?Schema $not = null;
-    public ?array $dependentSchemas = null;
 
     // Array properties
     /** @var Schema|string|null */
@@ -162,6 +161,8 @@ class Schema implements JsonSerializable
     public ?Schema $propertyNames = null;
     public ?int $minProperties = null;
     public ?int $maxProperties = null;
+    public ?array $dependentSchemas = null;
+    public ?object $dependentRequired = null;
 
     // A boolean is a valid schema: true validates anything and false nothing
     private ?bool $unilateral = null;
@@ -184,7 +185,6 @@ class Schema implements JsonSerializable
      * @param Schema[]|null $oneOf
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
-     * @param ?array $dependentSchemas
      * @param string|null $enumPattern
      * 
      * @param Schema|string|null $items
@@ -216,6 +216,8 @@ class Schema implements JsonSerializable
      * @param Schema|null $propertyNames
      * @param integer|null $minProperties
      * @param integer|null $maxProperties
+     * @param ?array $dependentSchemas
+     * @param ?object $dependentRequired
      */
     public function __construct(
         $type = null,
@@ -235,7 +237,6 @@ class Schema implements JsonSerializable
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
-        ?array $dependentSchemas = null,
         ?string $enumPattern = null,
 
         $items = null,
@@ -268,7 +269,9 @@ class Schema implements JsonSerializable
         ?array $required = null,
         ?Schema $propertyNames = null,
         ?int $minProperties = null,
-        ?int $maxProperties = null
+        ?int $maxProperties = null,
+        ?array $dependentSchemas = null,
+        ?object $dependentRequired = null
     ) {
         $this->type = $type;
         $this->id = $id;
@@ -287,7 +290,6 @@ class Schema implements JsonSerializable
         $this->oneOf = $oneOf;
         $this->anyOf = $anyOf;
         $this->not = $not;
-        $this->dependentSchemas = $dependentSchemas;
 
         if ($this->enum === null && $enumPattern !== null) {
             $this->enum = self::patternToEnum($enumPattern);
@@ -328,6 +330,8 @@ class Schema implements JsonSerializable
         $this->propertyNames = $propertyNames;
         $this->minProperties = $minProperties;
         $this->maxProperties = $maxProperties;
+        $this->dependentSchemas = $dependentSchemas;
+        $this->dependentRequired = $dependentRequired;
 
         if ($this->unevaluatedProperties !== null) {
             throw new NotYetImplementedException("unevaluatedProperties is not yet implemented", ['#']);
@@ -382,7 +386,6 @@ class Schema implements JsonSerializable
             isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
             isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
             isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
-            $dependentSchemas,
             // enumPattern
             null,
 
@@ -417,6 +420,8 @@ class Schema implements JsonSerializable
             isset($decoded['propertyNames']) ? StringSchema::fromJson($decoded['propertyNames']) : null,
             $decoded['minProperties'],
             $decoded['maxProperties'],
+            $dependentSchemas,
+            $decoded['dependentRequired'],
         );
     }
 
@@ -1184,6 +1189,19 @@ class Schema implements JsonSerializable
             }
         }
 
+        if ($this->dependentRequired !== null) {
+            /** @var Schema $schema */
+            foreach ($this->dependentRequired as $property => $properties) {
+                if (property_exists($value, $property)) {
+                    foreach ($properties as $prop) {
+                        if (!property_exists($value, $prop)) {
+                            throw new InvalidSchemaValueException('Since property ' . $property . ' expected property ' . $prop . ' to be present', [...$path, 'dependentRequired']);
+                        }
+                    }
+                }
+            }
+        }
+
         if ($this->unevaluatedProperties !== null) {
             throw new NotYetImplementedException("unevaluatedProperties is not yet implemented", $path);
         }
@@ -1454,7 +1472,6 @@ class Schema implements JsonSerializable
             + ($this->allOf !== null ? ['allOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->allOf)] : [])
             + ($this->oneOf !== null ? ['oneOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->oneOf)] : [])
             + ($this->anyOf !== null ? ['anyOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->anyOf)] : [])
-            + ($dependentSchemas !== null ? $dependentSchemas : [])
             + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : [])
             + ($this->items !== null ? ['items' => $this->items->jsonSerialize()] : [])
             + ($this->prefixItems !== null ? ['prefixItems' => $this->prefixItems] : [])
@@ -1491,6 +1508,8 @@ class Schema implements JsonSerializable
             + ($this->required !== null ? ['required' => $this->required] : [])
             + ($this->propertyNames !== null ? ['propertyNames' => $this->propertyNames] : [])
             + ($this->minProperties !== null ? ['minProperties' => $this->minProperties] : [])
-            + ($this->maxProperties !== null ? ['maxProperties' => $this->maxProperties] : []);
+            + ($this->maxProperties !== null ? ['maxProperties' => $this->maxProperties] : [])
+            + ($dependentSchemas !== null ? $dependentSchemas : [])
+            + ($this->dependentRequired !== null ? ['dependentRequired' => $this->dependentRequired] : []);
     }
 }

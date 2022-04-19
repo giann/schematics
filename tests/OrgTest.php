@@ -15,7 +15,7 @@ final class OrgTest extends TestCase
     // List of not yet implemented stuff things
     private static array $ignore = [
         // tries to hit localhost to refer to a local file, we should run a local server to serve it
-        'vocabulary.json'
+        'vocabulary.json',
     ];
 
     public function testOrg(): void
