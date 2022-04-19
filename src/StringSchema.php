@@ -15,11 +15,11 @@ use InvalidArgumentException;
 class StringSchema extends Schema
 {
     /**
-     * @param string|null $title
      * @param string|null $id
      * @param string|null $anchor
      * @param string|null $ref
      * @param array|null $defs
+     * @param string|null $title
      * @param string|null $description
      * @param mixed $default
      * @param boolean|null $deprecated
@@ -27,9 +27,9 @@ class StringSchema extends Schema
      * @param boolean|null $writeOnly
      * @param mixed $const
      * @param array|null $enum
-     * @param array|null $allOf
-     * @param array|null $oneOf
-     * @param array|null $anyOf
+     * @param Schema[]|null $allOf
+     * @param Schema[]|null $oneOf
+     * @param Schema[]|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param string|null $format
@@ -94,9 +94,7 @@ class StringSchema extends Schema
             null,
             null,
             null,
-            null,
 
-            null,
             null,
             null,
             null,

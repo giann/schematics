@@ -16,11 +16,11 @@ use ReflectionException;
 class ObjectSchema extends Schema
 {
     /**
-     * @param string|null $title
      * @param string|null $id
      * @param string|null $anchor
      * @param string|null $ref
      * @param array|null $defs
+     * @param string|null $title
      * @param string|null $description
      * @param mixed $default
      * @param boolean|null $deprecated
@@ -28,19 +28,22 @@ class ObjectSchema extends Schema
      * @param boolean|null $writeOnly
      * @param mixed $const
      * @param array|null $enum
-     * @param array|null $allOf
-     * @param array|null $oneOf
-     * @param array|null $anyOf
+     * @param Schema[]|null $allOf
+     * @param Schema[]|null $oneOf
+     * @param Schema[]|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
+     * 
      * @param array|null $properties
      * @param array|null $patternProperties
-     * @param Schema|bool|null $additionalProperties
-     * @param Schema|bool|null $unevaluatedProperties
-     * @param string[]|null $requiredProperties
-     * @param StringSchema|null $propertyNames
+     * @param Schema|null $additionalProperties
+     * @param Schema|null $unevaluatedProperties
+     * @param string[]|null $required
+     * @param Schema|null $propertyNames
      * @param integer|null $minProperties
      * @param integer|null $maxProperties
+     * @param ?array $dependentSchemas
+     * @param ?object $dependentRequired
      */
     public function __construct(
         ?string $title = null,
@@ -65,10 +68,12 @@ class ObjectSchema extends Schema
         ?array $patternProperties = null,
         $additionalProperties = null,
         $unevaluatedProperties = null,
-        ?array $requiredProperties = null,
-        ?StringSchema $propertyNames = null,
+        ?array $required = null,
+        ?Schema $propertyNames = null,
         ?int $minProperties = null,
-        ?int $maxProperties = null
+        ?int $maxProperties = null,
+        ?array $dependentSchemas = null,
+        ?object $dependentRequired = null
     ) {
         parent::__construct(
             Schema::TYPE_OBJECT,
@@ -99,7 +104,6 @@ class ObjectSchema extends Schema
             null,
             null,
             null,
-            null,
 
             null,
             null,
@@ -119,10 +123,12 @@ class ObjectSchema extends Schema
             $patternProperties,
             $additionalProperties,
             $unevaluatedProperties,
-            $requiredProperties,
+            $required,
             $propertyNames,
             $minProperties,
             $maxProperties,
+            $dependentSchemas,
+            $dependentRequired,
         );
     }
 }

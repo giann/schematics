@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use Giann\Schematics\ArraySchema;
 use Giann\Schematics\InvalidSchemaValueException;
+use Giann\Schematics\Model;
 use Giann\Schematics\NumberSchema;
 use Giann\Schematics\ObjectSchema;
 use Giann\Schematics\Schema;
@@ -14,7 +15,7 @@ use Giann\Schematics\SchemaDescription;
 /**
  * @ObjectSchema
  */
-class Person
+class Person implements Model
 {
     const SEX_MALE = 'male';
     const SEX_FEMALE = 'female';
@@ -58,6 +59,17 @@ class Person
         $this->sex = $sex;
         $this->father = $father;
     }
+
+    public static function fromJson(array $json): object
+    {
+        return new Person(
+            $json['id'],
+            $json['names'],
+            $json['age'],
+            $json['sex'],
+            isset($json['father']) ? Person::fromJson($json) : null,
+        );
+    }
 }
 
 // Infer $allOf Person
@@ -91,6 +103,19 @@ class Hero extends Person
         $this->superName = $superName;
         $this->power = $power;
     }
+
+    public static function fromJson(array $json): object
+    {
+        return new Hero(
+            $json['id'],
+            $json['names'],
+            $json['age'],
+            $json['sex'],
+            isset($json['father']) ? Person::fromJson($json) : null,
+            $json['superName'],
+            $json['power']
+        );
+    }
 }
 
 final class GenerateJsonSchemaTest extends TestCase
@@ -115,10 +140,10 @@ final class GenerateJsonSchemaTest extends TestCase
                 ],
                 'allOf' => [
                     [
-                        '$ref' => '#/definitions/Person'
+                        '$ref' => '#/$defs/Person'
                     ]
                 ],
-                'definitions' => [
+                '$defs' => [
                     'Person' => [
                         'type' => 'object',
                         'properties' => [
@@ -144,7 +169,7 @@ final class GenerateJsonSchemaTest extends TestCase
                                         'type' => 'null'
                                     ],
                                     [
-                                        '$ref' => '#/definitions/Person'
+                                        '$ref' => '#/$defs/Person'
                                     ]
                                 ]
                             ],
@@ -202,7 +227,7 @@ final class GenerateJsonSchemaTest extends TestCase
 
             $this->assertTrue(false);
         } catch (InvalidSchemaValueException $e) {
-            $this->assertEquals('Expected to be uuid at #/allOf/0/#/definitions/Person/id', $e->getMessage());
+            $this->assertEquals('Expected to be uuid got `dumpid` at #/allOf/0/#/$defs/Person/id', $e->getMessage());
         }
     }
 }

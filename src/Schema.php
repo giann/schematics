@@ -19,7 +19,7 @@ use ReflectionObject;
 use Throwable;
 
 // Use to differenciate a property with a null value from the absence of the property. ex: { "const": null }
-final class Absent
+final class NullConst
 {
 }
 
@@ -380,7 +380,7 @@ class Schema implements JsonSerializable
             $decoded['deprecated'],
             $decoded['readOnly'],
             $decoded['writeOnly'],
-            array_key_exists('const', $decoded) ? $decoded['const'] : new Absent(),
+            array_key_exists('const', $decoded) && $decoded['const'] === null ? new NullConst() : $decoded['const'],
             $decoded['enum'],
             isset($decoded['allOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['allOf']) : null,
             isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
@@ -436,7 +436,7 @@ class Schema implements JsonSerializable
             if ($this->ref == '#') {
                 $this->resolvedRef = '#';
             } else {
-                $this->resolvedRef = '#/$def/' . $this->ref;
+                $this->resolvedRef = '#/$defs/' . $this->ref;
 
                 if (!isset($root->defs[$this->ref])) {
                     $root->defs[$this->ref] = true; // Avoid circular ref resolving
@@ -573,6 +573,10 @@ class Schema implements JsonSerializable
 
     private static function equal($a, $b): bool
     {
+        if ($a instanceof NullConst && $b instanceof NullConst) {
+            return true;
+        }
+
         // Unlike php, json schema expect two object to be equal but its properties to be strictly equal
         if (is_object($a) && is_object($b)) {
             foreach ($a as $key => $value) {
@@ -707,7 +711,7 @@ class Schema implements JsonSerializable
             throw new InvalidSchemaValueException('Expected null got ' . gettype($value), $path);
         }
 
-        if (!($this->const instanceof Absent) && !self::equal($this->const, $value)) {
+        if ($this->const !== null && !self::equal($this->const, $value)) {
             throw new InvalidSchemaValueException(
                 "Expected value to be the constant\n"
                     . json_encode($this->const, JSON_PRETTY_PRINT)
@@ -927,9 +931,14 @@ class Schema implements JsonSerializable
             }
         }
 
-        if ($this->unevaluatedItems !== null) {
-            throw new NotYetImplementedException('unevaluatedItems is not yet implemented', $path);
-        }
+        // $unevaluatedOffset = count(array_slice($this->prefixItems, 0, count($value)))
+        //     + count(array_slice($value, count($this->prefixItems ?? [])));
+
+        // if ($this->unevaluatedItems !== null && $unevaluatedOffset < count($value)) {
+        //     foreach (array_slice($value, $unevaluatedOffset) as $i => $item) {
+        //         $this->unevaluatedItems->validate($item, $root, [...$path, 'unevaluatedItems', $i]);
+        //     }
+        // }
     }
 
     private function validateNumber($value, array $path = ['#']): void
@@ -1406,7 +1415,6 @@ class Schema implements JsonSerializable
                             null,
                             null,
                             null,
-                            null,
                             // oneOf
                             [
                                 new NullSchema(),
@@ -1465,14 +1473,14 @@ class Schema implements JsonSerializable
             + ($this->anchor !== null ? ['$anchor' => $this->anchor] : [])
             + ($this->resolvedRef !== null ? ['$ref' => $this->resolvedRef] : [])
             + ($this->resolvedRef === null && $this->ref !== null ? ['$ref' => $this->ref] : [])
-            + ($this->defs !== null ? ['$defs' => $this->defs] : [])
+            + ($this->defs !== null ? ['$defs' => array_map(fn ($el) => $el->jsonSerialize(), $this->defs)] : [])
             + ($this->title !== null ? ['title' => $this->title] : [])
             + ($this->description !== null ? ['description' => $this->description] : [])
             + ($this->default !== null ? ['default' => $this->default] : [])
             + ($this->deprecated !== null ? ['deprecated' => $this->deprecated] : [])
             + ($this->readOnly !== null ? ['readOnly' => $this->readOnly] : [])
             + ($this->writeOnly !== null ? ['writeOnly' => $this->writeOnly] : [])
-            + (!($this->const instanceof Absent) ? ['const' => $this->const] : [])
+            + ($this->const !== null ? ['const' => $this->const instanceof NullConst ? null : $this->const] : [])
             + ($this->enum !== null ? ['enum' => $this->enum] : [])
             + ($this->allOf !== null ? ['allOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->allOf)] : [])
             + ($this->oneOf !== null ? ['oneOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->oneOf)] : [])

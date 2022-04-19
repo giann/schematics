@@ -13,11 +13,11 @@ namespace Giann\Schematics;
 class NumberSchema extends Schema
 {
     /**
-     * @param string|null $title
      * @param string|null $id
      * @param string|null $anchor
      * @param string|null $ref
      * @param array|null $defs
+     * @param string|null $title
      * @param string|null $description
      * @param mixed $default
      * @param boolean|null $deprecated
@@ -25,9 +25,9 @@ class NumberSchema extends Schema
      * @param boolean|null $writeOnly
      * @param mixed $const
      * @param array|null $enum
-     * @param array|null $allOf
-     * @param array|null $oneOf
-     * @param array|null $anyOf
+     * @param Schema[]|null $allOf
+     * @param Schema[]|null $oneOf
+     * @param Schema[]|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
      * 
@@ -40,11 +40,6 @@ class NumberSchema extends Schema
      */
     public function __construct(
         bool $integer = false,
-        $multipleOf = null,
-        $minimum = null,
-        $maximum = null,
-        $exclusiveMinimum = null,
-        $exclusiveMaximum = null,
 
         ?string $title = null,
         ?string $id = null,
@@ -62,7 +57,13 @@ class NumberSchema extends Schema
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
-        ?string $enumPattern = null
+        ?string $enumPattern = null,
+
+        $multipleOf = null,
+        $minimum = null,
+        $maximum = null,
+        $exclusiveMinimum = null,
+        $exclusiveMaximum = null
     ) {
         parent::__construct(
             $integer ? Schema::TYPE_INTEGER : Schema::TYPE_NUMBER,
@@ -93,9 +94,7 @@ class NumberSchema extends Schema
             null,
             null,
             null,
-            null,
 
-            $integer,
             $multipleOf,
             $minimum,
             $maximum,
