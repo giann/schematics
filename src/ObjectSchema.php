@@ -110,7 +110,6 @@ class ObjectSchema extends Schema
             null,
             null,
             null,
-            null,
 
             null,
             null,

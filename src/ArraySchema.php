@@ -12,18 +12,6 @@ namespace Giann\Schematics;
  */
 class ArraySchema extends Schema
 {
-    /** @var Schema|string|null|bool */
-    public $items = null;
-    /** @var Schema[] */
-    public ?array $prefixItems = null;
-    public ?bool $additionalItems = null;
-    public ?Schema $contains = null;
-    public ?int $minContains = null;
-    public ?int $maxContains = null;
-    public ?int $minItems;
-    public ?int $maxItems;
-    public ?bool $uniqueItems = null;
-
     /**
      * @param string|null $id
      * @param string|null $anchor
@@ -42,14 +30,14 @@ class ArraySchema extends Schema
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
-     * @param Schema|string|null|bool $items
+     * 
+     * @param Schema|null $items
      * @param Schema[]|null $prefixItems
-     * @param boolean]|null $additionalItems
      * @param Schema|null $contains
      * @param integer|null $minContains
      * @param integer|null $maxContains
      * @param boolean|null $uniqueItems
-     * @param boolean|string|Schema $unevaluatedItems
+     * @param null|Schema $unevaluatedItems
      */
     public function __construct(
         ?string $title = null,
