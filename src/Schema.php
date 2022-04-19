@@ -796,14 +796,12 @@ class Schema implements JsonSerializable
                 try {
                     $schema->validate($value, $root, [...$path, 'oneOf', $i]);
                     $oneOf++;
-
-                    break;
                 } catch (InvalidSchemaValueException $e) {
                     $exceptions[] = $e;
                 }
             }
 
-            if ($oneOf > 1 || $oneOf == 0) {
+            if ($oneOf !== 1) {
                 throw new InvalidSchemaValueException(
                     "Should validate against one of\n"
                         . json_encode($this->oneOf, JSON_PRETTY_PRINT)
