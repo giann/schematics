@@ -160,7 +160,7 @@ class Schema implements JsonSerializable
     /** @var Schema|null */
     public $unevaluatedProperties = null;
     /** @var string[] */
-    public ?array $requiredProperties = null;
+    public ?array $required = null;
     public ?Schema $propertyNames = null;
     public ?int $minProperties = null;
     public ?int $maxProperties = null;
@@ -213,7 +213,7 @@ class Schema implements JsonSerializable
      * @param array|null $patternProperties
      * @param Schema|null $additionalProperties
      * @param Schema|null $unevaluatedProperties
-     * @param string[]|null $requiredProperties
+     * @param string[]|null $required
      * @param Schema|null $propertyNames
      * @param integer|null $minProperties
      * @param integer|null $maxProperties
@@ -1122,7 +1122,7 @@ class Schema implements JsonSerializable
                 try {
                     $schema->validate($reflection->getProperty($key)->getValue($value), $root, [...$path, $key]);
                 } catch (ReflectionException $_) {
-                    if ($schema->acceptsAll()) {
+                    if ($schema->acceptsAll() && $this->required !== null && in_array($key, $this->required)) {
                         throw new InvalidSchemaValueException("Value has no property " . $key, $path);
                     }
                 }

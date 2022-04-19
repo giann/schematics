@@ -88,6 +88,8 @@ final class OrgTest extends TestCase
 
                                 $failed[$fileinfo->getFilename()] ??= [];
                                 $failed[$fileinfo->getFilename()][] = "Something went wrong in " . $message . " -> " . $e->getMessage();
+
+                                echo PHP_EOL . "Something went wrong in " . $message . " -> " . $e->getMessage();
                             }
                         }
                     }
