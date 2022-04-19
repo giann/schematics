@@ -853,37 +853,35 @@ class Schema implements JsonSerializable
         }
 
         if ($this->contains !== null) {
-            $contains = false;
+            $contains = 0;
             foreach ($value as $i => $item) {
                 try {
                     $this->contains->validate($item, $root, [...$path, 'contains', $i]);
 
-                    $contains = true;
-
-                    break;
+                    $contains++;
                 } catch (InvalidSchemaValueException $_) {
                 }
             }
 
-            if (!$contains) {
+            if ($this->minContains !== null && $contains < $this->minContains) {
+                throw new InvalidSchemaValueException('Expected at least ' . $this->minContains . ' to validate against `contains` elements got ' . $contains, $path);
+            }
+
+            if ($this->maxContains !== null && $contains > $this->maxContains) {
+                throw new InvalidSchemaValueException('Expected at most ' . $this->maxContains . ' to validate against `contains` elements got ' . $contains, $path);
+            }
+
+            if ($this->minContains === null && $contains === 0) {
                 throw new InvalidSchemaValueException('Expected at least one item to validate against:\n' . json_encode($this->contains, JSON_PRETTY_PRINT), $path);
-            }
-
-            if ($this->minContains !== null && count($value) < $this->minContains) {
-                throw new InvalidSchemaValueException("Expected at least ' . $this->minContains . ' to validate against `contains` elements got " . count($value), $path);
-            }
-
-            if ($this->maxContains !== null && count($value) > $this->maxContains) {
-                throw new InvalidSchemaValueException("Expected at most ' . $this->maxContains . ' to validate against `contains` elements got " . count($value), $path);
             }
         }
 
         if ($this->minItems !== null && count($value) < $this->minItems) {
-            throw new InvalidSchemaValueException("Expected at least ' . $this->minItems . ' elements got " . count($value), $path);
+            throw new InvalidSchemaValueException('Expected at least ' . $this->minItems . ' elements got ' . count($value), $path);
         }
 
         if ($this->maxItems !== null && count($value) > $this->maxItems) {
-            throw new InvalidSchemaValueException("Expected at most ' . $this->maxItems . ' elements got " . count($value), $path);
+            throw new InvalidSchemaValueException('Expected at most ' . $this->maxItems . ' elements got ' . count($value), $path);
         }
 
         if ($this->uniqueItems === true) {
