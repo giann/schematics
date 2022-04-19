@@ -657,13 +657,14 @@ class Schema implements JsonSerializable
                         }
                         break;
                     case 'number':
-                        if (is_numeric($value)) {
+                        if (is_float($value) || is_int($value)) {
                             $validates = true;
                             break;
                         }
                         break;
                     case 'integer':
-                        if (is_int($value)) {
+                        // 1.0 is considered to be integer but is_int(1.0) == false
+                        if ((is_int($value) || is_float($value)) && floor($value) == $value) {
                             $validates = true;
                             break;
                         }
@@ -853,7 +854,7 @@ class Schema implements JsonSerializable
             }
 
             if ($validated) {
-                throw new InvalidSchemaValueException("Can't validate against: " . json_encode($this->not), $path);
+                throw new InvalidSchemaValueException("Should not validate against: " . json_encode($this->not), $path);
             }
         }
     }
@@ -943,28 +944,32 @@ class Schema implements JsonSerializable
             return;
         }
 
-        if (!is_int($value) && $this->type === 'integer') {
-            throw new InvalidSchemaValueException("Expected an integer got " . gettype($value), $path);
+        if ((is_int($value) || is_float($value)) && floor($value) != $value && $this->type === 'integer') {
+            throw new InvalidSchemaValueException("Expected an integer got " . gettype($value) . '(' . $value . ')', $path);
         }
 
-        if ($this->multipleOf !== null && $value % $this->multipleOf !== 0) {
-            throw new InvalidSchemaValueException("Expected a multiple of " . $this->multipleOf, $path);
+        if ($this->multipleOf !== null) {
+            $div = $value / $this->multipleOf;
+
+            if (is_infinite($div) || floor($div) != $div) {
+                throw new InvalidSchemaValueException("Expected a multiple of " . $this->multipleOf, $path);
+            }
         }
 
         if ($this->minimum !== null && $value < $this->minimum) {
-            throw new InvalidSchemaValueException("Expected value to be less or equal to " . $this->minimum, $path);
+            throw new InvalidSchemaValueException("Expected value to be greater or equal to " . $this->minimum . ', got ' . $value, $path);
         }
 
         if ($this->maximum !== null && $value > $this->maximum) {
-            throw new InvalidSchemaValueException("Expected value to be greater or equal to " . $this->maximum, $path);
+            throw new InvalidSchemaValueException("Expected value to be less or equal to " . $this->maximum . ', got ' . $value, $path);
         }
 
         if ($this->exclusiveMinimum !== null && $value <= $this->exclusiveMinimum) {
-            throw new InvalidSchemaValueException("Expected value to be less than " . $this->exclusiveMinimum, $path);
+            throw new InvalidSchemaValueException("Expected value to be less than " . $this->exclusiveMinimum . ', got ' . $value, $path);
         }
 
         if ($this->exclusiveMaximum !== null && $value >= $this->exclusiveMaximum) {
-            throw new InvalidSchemaValueException("Expected value to be greather than " . $this->exclusiveMaximum, $path);
+            throw new InvalidSchemaValueException("Expected value to be greather than " . $this->exclusiveMaximum . ', got ' . $value, $path);
         }
     }
 
