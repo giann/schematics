@@ -699,7 +699,7 @@ class Schema implements JsonSerializable
             );
         }
 
-        if ($this->enum !== null && !in_array($value instanceof JsonSerializable ? $value->jsonSerialize() : $value, $this->enum, true)) {
+        if ($this->enum !== null && !self::contains($value instanceof JsonSerializable ? $value->jsonSerialize() : $value, $this->enum)) {
             throw new InvalidSchemaValueException("Expected value within [" . implode(', ', $this->enum) . '] got `' . $value . '`', $path);
         }
 
