@@ -114,6 +114,7 @@ class Schema implements JsonSerializable
      */
     public ?array $anyOf = null;
     public ?Schema $not = null;
+    public ?array $dependentSchemas = null;
 
     // Array properties
     /** @var Schema|string|null */
@@ -183,6 +184,7 @@ class Schema implements JsonSerializable
      * @param Schema[]|null $oneOf
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
+     * @param ?array $dependentSchemas
      * @param string|null $enumPattern
      * 
      * @param Schema|string|null $items
@@ -233,6 +235,7 @@ class Schema implements JsonSerializable
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
+        ?array $dependentSchemas = null,
         ?string $enumPattern = null,
 
         $items = null,
@@ -284,6 +287,7 @@ class Schema implements JsonSerializable
         $this->oneOf = $oneOf;
         $this->anyOf = $anyOf;
         $this->not = $not;
+        $this->dependentSchemas = $dependentSchemas;
 
         if ($this->enum === null && $enumPattern !== null) {
             $this->enum = self::patternToEnum($enumPattern);
@@ -355,6 +359,11 @@ class Schema implements JsonSerializable
             $patternProperties[$key] = Schema::fromJson($schema);
         }
 
+        $dependentSchemas = isset($decoded['dependentSchemas']) ? [] : null;
+        foreach ($decoded['dependentSchemas'] ?? [] as $key => $schema) {
+            $dependentSchemas[$key] = Schema::fromJson($schema);
+        }
+
         return new Schema(
             $decoded['type'],
             $decoded['id'],
@@ -373,7 +382,7 @@ class Schema implements JsonSerializable
             isset($decoded['oneOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['oneOf']) : null,
             isset($decoded['anyOf']) ? array_map(fn ($def) => self::fromJson($def), $decoded['anyOf']) : null,
             isset($decoded['not']) ? self::fromJson($decoded['not']) : null,
-
+            $dependentSchemas,
             // enumPattern
             null,
 
@@ -1168,6 +1177,15 @@ class Schema implements JsonSerializable
             }
         }
 
+        if ($this->dependentSchemas !== null) {
+            /** @var Schema $schema */
+            foreach ($this->dependentSchemas as $property => $schema) {
+                if (property_exists($value, $property)) {
+                    $schema->validate($value, $root, [...$path, 'dependentSchemas']);
+                }
+            }
+        }
+
         if ($this->unevaluatedProperties !== null) {
             throw new NotYetImplementedException("unevaluatedProperties is not yet implemented", $path);
         }
@@ -1412,6 +1430,13 @@ class Schema implements JsonSerializable
             }
         }
 
+        $dependentSchemas = null;
+        if ($this->dependentSchemas !== null) {
+            foreach ($this->dependentSchemas as $name => $property) {
+                $dependentSchemas[$name] = $property->jsonSerialize();
+            }
+        }
+
         return ($this->type !== null ? [
             'type' => $this->type
         ] : [])
@@ -1431,6 +1456,7 @@ class Schema implements JsonSerializable
             + ($this->allOf !== null ? ['allOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->allOf)] : [])
             + ($this->oneOf !== null ? ['oneOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->oneOf)] : [])
             + ($this->anyOf !== null ? ['anyOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->anyOf)] : [])
+            + ($dependentSchemas !== null ? $dependentSchemas : [])
             + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : [])
             + ($this->items !== null ? ['items' => $this->items->jsonSerialize()] : [])
             + ($this->prefixItems !== null ? ['prefixItems' => $this->prefixItems] : [])
