@@ -689,6 +689,12 @@ class Schema implements JsonSerializable
             }
         }
 
+        if ($this->type === 'boolean' && !is_bool($value)) {
+            throw new InvalidSchemaValueException('Expected type to be boolean got ' . gettype($value), $path);
+        } else if ($this->type === 'null' && $value !== null) {
+            throw new InvalidSchemaValueException('Expected null got ' . gettype($value), $path);
+        }
+
         if (!($this->const instanceof Absent) && !self::equal($this->const, $value)) {
             throw new InvalidSchemaValueException(
                 "Expected value to be the constant\n"
@@ -1117,10 +1123,13 @@ class Schema implements JsonSerializable
         $root = $root ?? $this;
         $reflection = new ReflectionObject($value);
 
+        $clearedProperties = [];
         if ($this->properties !== null && count($this->properties) > 0) {
             foreach ($this->properties as $key => $schema) {
                 try {
                     $schema->validate($reflection->getProperty($key)->getValue($value), $root, [...$path, $key]);
+
+                    $clearedProperties[] = $key;
                 } catch (ReflectionException $_) {
                     if ($schema->acceptsAll() && $this->required !== null && in_array($key, $this->required)) {
                         throw new InvalidSchemaValueException("Value has no property " . $key, $path);
@@ -1131,25 +1140,29 @@ class Schema implements JsonSerializable
 
         if ($this->patternProperties !== null && count($this->patternProperties) > 0) {
             foreach ($this->patternProperties as $pattern => $schema) {
+                $pattern = preg_match('/\/[^\/]+\//', $pattern) === 0 ? '/' . $pattern . '/' : $pattern;
+
                 foreach ($reflection->getProperties() as $property) {
                     if (preg_match($pattern, $property->getName())) {
-                        $schema->validate($property->getValue(), $root, [...$path, $property->getName()]);
+                        $schema->validate($property->getValue($value), $root, [...$path, $property->getName()]);
+
+                        $clearedProperties[] = $property->getName();
                     }
                 }
             }
         }
 
         if ($this->additionalProperties !== null) {
-            if (is_bool($this->additionalProperties) && !$this->additionalProperties) {
+            if ($this->additionalProperties === false) {
                 foreach ($reflection->getProperties() as $property) {
-                    if (!isset($this->properties[$property->getName()])) {
+                    if (!in_array($property->getName(), $clearedProperties)) {
                         throw new InvalidSchemaValueException("Additionnal property " . $property->getName() . " is not allowed", $path);
                     }
                 }
             } else if ($this->additionalProperties instanceof Schema) {
                 foreach ($reflection->getProperties() as $property) {
-                    if (!isset($this->properties[$property->getName()])) {
-                        $this->additionalProperties->validate($property->getValue(), $root, [...$path, $property->getName()]);
+                    if (!in_array($property->getName(), $clearedProperties)) {
+                        $this->additionalProperties->validate($property->getValue($value), $root, [...$path, $property->getName()]);
                     }
                 }
             }
