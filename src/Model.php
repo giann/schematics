@@ -6,5 +6,5 @@ namespace Giann\Schematics;
 
 interface Model
 {
-    public static function fromJson(array $json): object;
+    public static function fromJson(object $json): object;
 }

@@ -25,9 +25,9 @@ final class NullConst
 
 class InvalidSchemaValueException extends Exception
 {
-    public function __construct(string $message = "", array $path, int $code = 0, ?Throwable $previous = null)
+    public function __construct(string $message = "", array $path, array $dataPath, int $code = 0, ?Throwable $previous = null)
     {
-        $message = $message . ' at ' . implode("/", $path);
+        $message = $message . ' at ' . implode("/", $dataPath);
 
         parent::__construct($message, $code, $previous);
     }
@@ -535,7 +535,7 @@ class Schema implements JsonSerializable
      * @param string[] $path
      * @return void
      */
-    public function validate($value, ?Schema $root = null, array $path = ['#']): void
+    public function validate($value, ?Schema $root = null, array $path = ['#'], array $dataPath = ['#']): void
     {
         $root = $root ?? $this;
 
@@ -543,14 +543,14 @@ class Schema implements JsonSerializable
         if ($this->unilateral === true) {
             return;
         } else if ($this->unilateral === false) {
-            throw new InvalidSchemaValueException("Schema rejects everything", $path);
+            throw new InvalidSchemaValueException("Schema rejects everything", $path, $dataPath);
         }
 
-        $this->validateCommon($value, $root, $path);
-        $this->validateArray($value, $root, $path);
-        $this->validateNumber($value, $path);
-        $this->validateString($value, $path);
-        $this->validateObject($value, $root, $path);
+        $this->validateCommon($value, $root, $path, $dataPath);
+        $this->validateArray($value, $root, $path, $dataPath);
+        $this->validateNumber($value, $path, $dataPath);
+        $this->validateString($value, $path, $dataPath);
+        $this->validateObject($value, $root, $path, $dataPath);
     }
 
     private static function is_associative($array): bool
@@ -647,7 +647,7 @@ class Schema implements JsonSerializable
         }
     }
 
-    private function validateCommon($value, ?Schema $root = null, array $path = ['#']): void
+    private function validateCommon($value, ?Schema $root = null, array $path = ['#'], array $dataPath = ['#']): void
     {
         // Here we only validate when multiple types, the other validate method will handle the case when there's only one type
         if (count((is_array($this->type) ? $this->type : null) ?? []) > 0) {
@@ -701,14 +701,14 @@ class Schema implements JsonSerializable
             }
 
             if (!$validates) {
-                throw new InvalidSchemaValueException('Expected type to be one of [' . implode(', ', ($this->type ?? [])) . '] got ' . gettype($value), $path);
+                throw new InvalidSchemaValueException('Expected type to be one of [' . implode(', ', ($this->type ?? [])) . '] got ' . gettype($value), $path, $dataPath);
             }
         }
 
         if ($this->type === 'boolean' && !is_bool($value)) {
-            throw new InvalidSchemaValueException('Expected type to be boolean got ' . gettype($value), $path);
+            throw new InvalidSchemaValueException('Expected type to be boolean got ' . gettype($value), $path, $dataPath);
         } else if ($this->type === 'null' && $value !== null) {
-            throw new InvalidSchemaValueException('Expected null got ' . gettype($value), $path);
+            throw new InvalidSchemaValueException('Expected null got ' . gettype($value), $path, $dataPath);
         }
 
         if ($this->const !== null && !self::equal($this->const, $value)) {
@@ -718,13 +718,15 @@ class Schema implements JsonSerializable
                     . "\ngot:\n"
                     . json_encode($value, JSON_PRETTY_PRINT),
                 $path,
+                $dataPath
             );
         }
 
         if ($this->enum !== null && !self::contains($value instanceof JsonSerializable ? $value->jsonSerialize() : $value, $this->enum)) {
             throw new InvalidSchemaValueException(
                 "Expected value within [" . implode(', ', array_map(fn ($el) => json_encode($el), $this->enum)) . '] got `' . json_encode($value) . '`',
-                $path
+                $path,
+                $dataPath
             );
         }
 
@@ -732,7 +734,7 @@ class Schema implements JsonSerializable
         if ($this->resolvedRef !== null) {
             // Root reference
             if ($this->ref === '#' && $root !== $this && $root !== null) {
-                $root->validate($value, $root, $path);
+                $root->validate($value, $root, $path, $dataPath);
             } else {
                 $refPath = explode('#', $this->resolvedRef);
                 $basePath = explode('/', $refPath[0]);
@@ -745,7 +747,7 @@ class Schema implements JsonSerializable
                     if (isset($root->defs[$fragment[2]])) {
                         $ref = $root->defs[$fragment[2]];
 
-                        $ref->validate($value, $root, [...$path, $this->resolvedRef]);
+                        $ref->validate($value, $root, [...$path, $this->resolvedRef], $dataPath);
                     } else {
                         throw new InvalidArgumentException('Can\'t resolve $ref ' . ($this->resolvedRef ?? $this->ref ?? ''));
                     }
@@ -767,7 +769,7 @@ class Schema implements JsonSerializable
                     } else {
                         if (self::is_associative($current)) {
                             if (!isset($current[$fragment])) {
-                                throw new InvalidSchemaValueException('Could not resolve $ref ' . $this->ref, $path);
+                                throw new InvalidSchemaValueException('Could not resolve $ref ' . $this->ref, $path, $dataPath);
                             }
 
                             $current = $current[$fragment];
@@ -775,20 +777,20 @@ class Schema implements JsonSerializable
                             $current = $current[intval($fragment)];
                         } else if (is_object($current)) {
                             if (!property_exists($current, $fragment)) {
-                                throw new InvalidSchemaValueException('Could not resolve $ref ' . $this->ref, $path);
+                                throw new InvalidSchemaValueException('Could not resolve $ref ' . $this->ref, $path, $dataPath);
                             }
 
                             $current = $current->{$fragment};
                         } else {
-                            throw new InvalidSchemaValueException('Could not resolve $ref ' . $this->ref, $path);
+                            throw new InvalidSchemaValueException('Could not resolve $ref ' . $this->ref, $path, $dataPath);
                         }
                     }
                 }
 
                 if ($current instanceof Schema) {
-                    $current->validate($value, $root, $path);
+                    $current->validate($value, $root, $path, $dataPath);
                 } else {
-                    throw new InvalidSchemaValueException('$ref ' . $this->ref . ' does not resolve to a schema', $path);
+                    throw new InvalidSchemaValueException('$ref ' . $this->ref . ' does not resolve to a schema', $path, $dataPath);
                 }
             } else {
                 throw new NotYetImplementedException('Reference other than #/../.. are not yet implemented: ' . $this->ref, $path);
@@ -796,7 +798,7 @@ class Schema implements JsonSerializable
         }
 
         foreach ($this->allOf ?? [] as $i => $schema) {
-            $schema->validate($value, $root, [...$path, 'allOf', $i]);
+            $schema->validate($value, $root, [...$path, 'allOf', $i], $dataPath);
         }
 
         if ($this->oneOf !== null && count($this->oneOf) > 0) {
@@ -804,7 +806,7 @@ class Schema implements JsonSerializable
             $exceptions = [];
             foreach ($this->oneOf as $i => $schema) {
                 try {
-                    $schema->validate($value, $root, [...$path, 'oneOf', $i]);
+                    $schema->validate($value, $root, [...$path, 'oneOf', $i], $dataPath);
                     $oneOf++;
                 } catch (InvalidSchemaValueException $e) {
                     $exceptions[] = $e;
@@ -817,7 +819,8 @@ class Schema implements JsonSerializable
                         . json_encode($this->oneOf, JSON_PRETTY_PRINT)
                         . "\nbut fails with:\n\t- "
                         . implode("\n\t- ", array_map(fn ($e) => $e->getMessage(), $exceptions)),
-                    $path
+                    $path,
+                    $dataPath
                 );
             }
         }
@@ -827,7 +830,7 @@ class Schema implements JsonSerializable
             $exceptions = [];
             foreach ($this->anyOf as $i => $schema) {
                 try {
-                    $schema->validate($value, $root, [...$path, 'anyOf', $i]);
+                    $schema->validate($value, $root, [...$path, 'anyOf', $i], $dataPath);
                     $anyOf = true;
 
                     break;
@@ -842,7 +845,8 @@ class Schema implements JsonSerializable
                         . json_encode($this->anyOf, JSON_PRETTY_PRINT)
                         . "\nbut fails with:\n\t- "
                         . implode("\n\t- ", array_map(fn ($e) => $e->getMessage(), $exceptions)),
-                    $path
+                    $path,
+                    $dataPath
                 );
             }
         }
@@ -850,7 +854,7 @@ class Schema implements JsonSerializable
         if ($this->not !== null) {
             $validated = false;
             try {
-                $this->not->validate($value, $root, [...$path, 'not']);
+                $this->not->validate($value, $root, [...$path, 'not'], $dataPath);
 
                 $validated = true;
             } catch (InvalidSchemaValueException $e) {
@@ -858,17 +862,17 @@ class Schema implements JsonSerializable
             }
 
             if ($validated) {
-                throw new InvalidSchemaValueException("Should not validate against: " . json_encode($this->not), $path);
+                throw new InvalidSchemaValueException("Should not validate against: " . json_encode($this->not), $path, $dataPath);
             }
         }
     }
 
-    private function validateArray($value, ?Schema $root = null, array $path = ['#']): void
+    private function validateArray($value, ?Schema $root = null, array $path = ['#'], array $dataPath): void
     {
         if ((!is_array($value) || self::is_associative($value))) {
             if ($this->type === 'array') {
                 // The schema specifically ask for an array, we throw
-                throw new InvalidSchemaValueException("Expected type to be array, got " . gettype($value), $path);
+                throw new InvalidSchemaValueException("Expected type to be array, got " . gettype($value), $path, $dataPath);
             }
 
             // Schema allows data to be something else, just ignore array validations
@@ -879,7 +883,7 @@ class Schema implements JsonSerializable
             $contains = 0;
             foreach ($value as $i => $item) {
                 try {
-                    $this->contains->validate($item, $root, [...$path, 'contains', $i]);
+                    $this->contains->validate($item, $root, [...$path, 'contains', $i], $dataPath);
 
                     $contains++;
                 } catch (InvalidSchemaValueException $_) {
@@ -887,31 +891,31 @@ class Schema implements JsonSerializable
             }
 
             if ($this->minContains !== null && $contains < $this->minContains) {
-                throw new InvalidSchemaValueException('Expected at least ' . $this->minContains . ' to validate against `contains` elements got ' . $contains, $path);
+                throw new InvalidSchemaValueException('Expected at least ' . $this->minContains . ' to validate against `contains` elements got ' . $contains, $path, $dataPath);
             }
 
             if ($this->maxContains !== null && $contains > $this->maxContains) {
-                throw new InvalidSchemaValueException('Expected at most ' . $this->maxContains . ' to validate against `contains` elements got ' . $contains, $path);
+                throw new InvalidSchemaValueException('Expected at most ' . $this->maxContains . ' to validate against `contains` elements got ' . $contains, $path, $dataPath);
             }
 
             if ($this->minContains === null && $contains === 0) {
-                throw new InvalidSchemaValueException('Expected at least one item to validate against:\n' . json_encode($this->contains, JSON_PRETTY_PRINT), $path);
+                throw new InvalidSchemaValueException('Expected at least one item to validate against:\n' . json_encode($this->contains, JSON_PRETTY_PRINT), $path, $dataPath);
             }
         }
 
         if ($this->minItems !== null && count($value) < $this->minItems) {
-            throw new InvalidSchemaValueException('Expected at least ' . $this->minItems . ' elements got ' . count($value), $path);
+            throw new InvalidSchemaValueException('Expected at least ' . $this->minItems . ' elements got ' . count($value), $path, $dataPath);
         }
 
         if ($this->maxItems !== null && count($value) > $this->maxItems) {
-            throw new InvalidSchemaValueException('Expected at most ' . $this->maxItems . ' elements got ' . count($value), $path);
+            throw new InvalidSchemaValueException('Expected at most ' . $this->maxItems . ' elements got ' . count($value), $path, $dataPath);
         }
 
         if ($this->uniqueItems === true) {
             $items = [];
-            foreach ($value as $item) {
+            foreach ($value as $i => $item) {
                 if (self::contains($item, $items)) {
-                    throw new InvalidSchemaValueException('Expected unique items', $path);
+                    throw new InvalidSchemaValueException('Expected unique items', $path, [...$dataPath, $i]);
                 }
 
                 $items[] = $item;
@@ -920,29 +924,29 @@ class Schema implements JsonSerializable
 
         if (count($this->prefixItems ?? []) > 0) {
             foreach (array_slice(($this->prefixItems ?? []), 0, count($value)) as $i => $prefixItem) {
-                $prefixItem->validate($value[$i], $root, [...$path, 'prefixItems', $i]);
+                $prefixItem->validate($value[$i], $root, [...$path, 'prefixItems', $i], [...$dataPath, $i]);
             }
         }
 
         if ($this->items !== null) {
             // Only test items that after prefixItems
             foreach (array_slice($value, count($this->prefixItems ?? [])) as $i => $item) {
-                $this->items->validate($item, $root, [...$path, 'items', $i]);
+                $this->items->validate($item, $root, [...$path, 'items', $i], [...$dataPath, $i]);
             }
         } else if ($this->unevaluatedItems !== null) {
             // TODO: this is not complete
             foreach (array_slice($value, count($this->prefixItems ?? [])) as $i => $item) {
-                $this->unevaluatedItems->validate($item, $root, [...$path, 'unevaluatedItems', $i]);
+                $this->unevaluatedItems->validate($item, $root, [...$path, 'unevaluatedItems', $i], [...$dataPath, $i]);
             }
         }
     }
 
-    private function validateNumber($value, array $path = ['#']): void
+    private function validateNumber($value, array $path = ['#'], array $dataPath): void
     {
         if (!is_int($value) && !is_float($value)) {
             if ($this->type === 'number' || $this->type === 'integer') {
                 // The schema specifically ask for an array, we throw
-                throw new InvalidSchemaValueException('Expected type to be ' . $this->type . ', got ' . gettype($value), $path);
+                throw new InvalidSchemaValueException('Expected type to be ' . $this->type . ', got ' . gettype($value), $path, $dataPath);
             }
 
             // Schema allows data to be something else, just ignore numeric validations
@@ -950,40 +954,40 @@ class Schema implements JsonSerializable
         }
 
         if (floor($value) != $value && $this->type === 'integer') {
-            throw new InvalidSchemaValueException("Expected an integer got " . gettype($value) . '(' . $value . ')', $path);
+            throw new InvalidSchemaValueException("Expected an integer got " . gettype($value) . '(' . $value . ')', $path, $dataPath);
         }
 
         if ($this->multipleOf !== null) {
             $div = $value / $this->multipleOf;
 
             if (is_infinite($div) || floor($div) != $div) {
-                throw new InvalidSchemaValueException("Expected a multiple of " . $this->multipleOf, $path);
+                throw new InvalidSchemaValueException("Expected a multiple of " . $this->multipleOf, $path, $dataPath);
             }
         }
 
         if ($this->minimum !== null && $value < $this->minimum) {
-            throw new InvalidSchemaValueException("Expected value to be greater or equal to " . $this->minimum . ', got ' . $value, $path);
+            throw new InvalidSchemaValueException("Expected value to be greater or equal to " . $this->minimum . ', got ' . $value, $path, $dataPath);
         }
 
         if ($this->maximum !== null && $value > $this->maximum) {
-            throw new InvalidSchemaValueException("Expected value to be less or equal to " . $this->maximum . ', got ' . $value, $path);
+            throw new InvalidSchemaValueException("Expected value to be less or equal to " . $this->maximum . ', got ' . $value, $path, $dataPath);
         }
 
         if ($this->exclusiveMinimum !== null && $value <= $this->exclusiveMinimum) {
-            throw new InvalidSchemaValueException("Expected value to be less than " . $this->exclusiveMinimum . ', got ' . $value, $path);
+            throw new InvalidSchemaValueException("Expected value to be less than " . $this->exclusiveMinimum . ', got ' . $value, $path, $dataPath);
         }
 
         if ($this->exclusiveMaximum !== null && $value >= $this->exclusiveMaximum) {
-            throw new InvalidSchemaValueException("Expected value to be greather than " . $this->exclusiveMaximum . ', got ' . $value, $path);
+            throw new InvalidSchemaValueException("Expected value to be greather than " . $this->exclusiveMaximum . ', got ' . $value, $path, $dataPath);
         }
     }
 
-    private function validateString($value, array $path = ['#']): void
+    private function validateString($value, array $path = ['#'], array $dataPath): void
     {
         if (!is_string($value)) {
             if ($this->type === 'string') {
                 // The schema specifically ask for an array, we throw
-                throw new InvalidSchemaValueException('Expected type to be ' . $this->type . ', got ' . gettype($value), $path);
+                throw new InvalidSchemaValueException('Expected type to be ' . $this->type . ', got ' . gettype($value), $path, $dataPath);
             }
 
             // Schema allows data to be something else, just ignore string validations
@@ -994,16 +998,16 @@ class Schema implements JsonSerializable
         if ($this->pattern !== null) {
             $pattern = preg_match('/\/[^\/]+\//', $this->pattern) === 0 ? '/' . $this->pattern . '/' : $this->pattern;
             if (preg_match($pattern, $value) !== 1) {
-                throw new InvalidSchemaValueException('Expected value to match ' . $this->pattern . ' got `' . $value . '`', $path);
+                throw new InvalidSchemaValueException('Expected value to match ' . $this->pattern . ' got `' . $value . '`', $path, $dataPath);
             }
         }
 
         if ($this->maxLength !== null && mb_strlen($value, 'UTF-8') > $this->maxLength) {
-            throw new InvalidSchemaValueException('Expected at most ' . $this->maxLength . ' characters long, got ' . mb_strlen($value, 'UTF-8'), $path);
+            throw new InvalidSchemaValueException('Expected at most ' . $this->maxLength . ' characters long, got ' . mb_strlen($value, 'UTF-8'), $path, $dataPath);
         }
 
         if ($this->minLength !== null && mb_strlen($value, 'UTF-8') < $this->minLength) {
-            throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . mb_strlen($value, 'UTF-8'), $path);
+            throw new InvalidSchemaValueException('Expected at least ' . $this->minLength . ' characters long, got ' . mb_strlen($value, 'UTF-8'), $path, $dataPath);
         }
 
         $decodedValue = $value;
@@ -1045,7 +1049,7 @@ class Schema implements JsonSerializable
             }
 
             if ($mimeType !== false && $mimeType !== $this->contentMediaType) {
-                throw new InvalidSchemaValueException('Expected content mime type to be ' . $this->contentMediaType . ' got ' . $mimeType, $path);
+                throw new InvalidSchemaValueException('Expected content mime type to be ' . $this->contentMediaType . ' got ' . $mimeType, $path, $dataPath);
             }
         }
 
@@ -1053,89 +1057,89 @@ class Schema implements JsonSerializable
             switch ($this->format) {
                 case self::FORMAT_DATETIME:
                     if (!preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+\d\d:\d+$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be date-time got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be date-time got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_TIME:
                     if (!preg_match('/^\d\d:\d\d:\d\d\+\d\d:\d+$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be time got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be time got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_DATE:
                     if (!preg_match('/^\d{4}-\d\d-\d\d$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be date got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be date got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_DURATION:
                     if (!preg_match(self::DURATION_REGEX, $value)) {
-                        throw new InvalidSchemaValueException('Expected to be duration got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be duration got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_EMAIL:
                 case self::FORMAT_IDNEMAIL:
                     if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                        throw new InvalidSchemaValueException('Expected to be email got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be email got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_HOSTNAME:
                 case self::FORMAT_IDNHOSTNAME:
                     if (!filter_var($value, FILTER_VALIDATE_DOMAIN)) {
-                        throw new InvalidSchemaValueException('Expected to be hostname got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be hostname got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_IPV4:
                     if (!preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be ipv4 got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be ipv4 got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_IPV6:
                     if (!preg_match('/^[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}::[0-9a-fA-F]{4}$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be ipv6 got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be ipv6 got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_UUID:
                     if (!preg_match('/^[a-f0-9]{8}\-[a-f0-9]{4}\-4[a-f0-9]{3}\-(8|9|a|b)[a-f0-9]{3}\-[a-f0-9]{12}$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be uuid got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be uuid got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_URI:
                 case self::FORMAT_IRI:
                     if (!filter_var($value, FILTER_VALIDATE_URL)) {
-                        throw new InvalidSchemaValueException('Expected to be uri got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be uri got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_URIREFERENCE:
                 case self::FORMAT_IRIREFERENCE:
                     if (!self::validateRelativeUri($value)) {
-                        throw new InvalidSchemaValueException('Expected to be uri-reference got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be uri-reference got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_URITEMPLATE:
                     if (!preg_match('/^$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be uri-template got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be uri-template got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_JSONPOINTER:
                 case self::FORMAT_RELATIVEJSONPOINTER: // TODO
                     if (!preg_match('/^\/?([^\/]+\/)*[^\/]+$/', $value)) {
-                        throw new InvalidSchemaValueException('Expected to be json-pointer got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be json-pointer got `' . $value . '`', $path, $dataPath);
                     }
                     break;
                 case self::FORMAT_REGEX:
                     if (!filter_var($value, FILTER_VALIDATE_REGEXP)) {
-                        throw new InvalidSchemaValueException('Expected to be email got `' . $value . '`', $path);
+                        throw new InvalidSchemaValueException('Expected to be email got `' . $value . '`', $path, $dataPath);
                     }
                     break;
             }
         }
     }
 
-    private function validateObject($value, ?Schema $root = null, array $path = ['#']): void
+    private function validateObject($value, ?Schema $root = null, array $path = ['#'], array $dataPath): void
     {
         if (!is_object($value)) {
             if ($this->type === 'object') {
                 // The schema specifically ask for an array, we throw
-                throw new InvalidSchemaValueException("Expected type to be ' . $this->type . ', got " . gettype($value), $path);
+                throw new InvalidSchemaValueException('Expected type to be ' . $this->type . ', got ' . gettype($value), $path, $dataPath);
             }
 
             // Schema allows data to be something else, just ignore numeric validations
@@ -1149,12 +1153,12 @@ class Schema implements JsonSerializable
         if ($this->properties !== null && count($this->properties) > 0) {
             foreach ($this->properties as $key => $schema) {
                 try {
-                    $schema->validate($reflection->getProperty($key)->getValue($value), $root, [...$path, $key]);
+                    $schema->validate($reflection->getProperty($key)->getValue($value), $root, [...$path, $key], [...$dataPath, $key]);
 
                     $clearedProperties[] = $key;
                 } catch (ReflectionException $_) {
                     if ($schema->acceptsAll() && $this->required !== null && in_array($key, $this->required)) {
-                        throw new InvalidSchemaValueException("Value has no property " . $key, $path);
+                        throw new InvalidSchemaValueException("Value has no property " . $key, $path, $dataPath);
                     }
                 }
             }
@@ -1166,7 +1170,7 @@ class Schema implements JsonSerializable
 
                 foreach ($reflection->getProperties() as $property) {
                     if (preg_match($pattern, $property->getName())) {
-                        $schema->validate($property->getValue($value), $root, [...$path, $property->getName()]);
+                        $schema->validate($property->getValue($value), $root, [...$path, $property->getName()], [...$dataPath, $property->getName()]);
 
                         $clearedProperties[] = $property->getName();
                     }
@@ -1178,13 +1182,13 @@ class Schema implements JsonSerializable
             if ($this->additionalProperties === false) {
                 foreach ($reflection->getProperties() as $property) {
                     if (!in_array($property->getName(), $clearedProperties)) {
-                        throw new InvalidSchemaValueException("Additionnal property " . $property->getName() . " is not allowed", $path);
+                        throw new InvalidSchemaValueException("Additionnal property " . $property->getName() . " is not allowed", $path, [...$dataPath, $property->getName()]);
                     }
                 }
             } else if ($this->additionalProperties instanceof Schema) {
                 foreach ($reflection->getProperties() as $property) {
                     if (!in_array($property->getName(), $clearedProperties)) {
-                        $this->additionalProperties->validate($property->getValue($value), $root, [...$path, $property->getName()]);
+                        $this->additionalProperties->validate($property->getValue($value), $root, [...$path, $property->getName()], [...$dataPath, $property->getName()]);
                     }
                 }
             }
@@ -1194,7 +1198,7 @@ class Schema implements JsonSerializable
             /** @var Schema $schema */
             foreach ($this->dependentSchemas as $property => $schema) {
                 if (property_exists($value, $property)) {
-                    $schema->validate($value, $root, [...$path, 'dependentSchemas']);
+                    $schema->validate($value, $root, [...$path, 'dependentSchemas'], [...$dataPath, $property]);
                 }
             }
         }
@@ -1205,7 +1209,7 @@ class Schema implements JsonSerializable
                 if (property_exists($value, $property)) {
                     foreach ($properties as $prop) {
                         if (!property_exists($value, $prop)) {
-                            throw new InvalidSchemaValueException('Since property ' . $property . ' expected property ' . $prop . ' to be present', [...$path, 'dependentRequired']);
+                            throw new InvalidSchemaValueException('Since property ' . $property . ' expected property ' . $prop . ' to be present', [...$path, 'dependentRequired'], [...$dataPath, $property]);
                         }
                     }
                 }
@@ -1221,23 +1225,23 @@ class Schema implements JsonSerializable
                 try {
                     $reflection->getProperty($property);
                 } catch (ReflectionException $_) {
-                    throw new InvalidSchemaValueException("Property " . $property . " is required", $path);
+                    throw new InvalidSchemaValueException("Property " . $property . " is required", $path, $dataPath);
                 }
             }
         }
 
         if ($this->propertyNames !== null) {
             foreach ($reflection->getProperties() as $property) {
-                $this->propertyNames->validate($property->getName(), $root, [...$path, $property->getName()]);
+                $this->propertyNames->validate($property->getName(), $root, [...$path, $property->getName()], [...$dataPath, $property->getName()]);
             }
         }
 
         if ($this->minProperties !== null && count($reflection->getProperties()) < $this->minProperties) {
-            throw new InvalidSchemaValueException("Should have at least " . $this->minProperties . " properties got " . count($reflection->getProperties()), $path);
+            throw new InvalidSchemaValueException("Should have at least " . $this->minProperties . " properties got " . count($reflection->getProperties()), $path, $dataPath);
         }
 
         if ($this->maxProperties !== null && count($reflection->getProperties()) > $this->maxProperties) {
-            throw new InvalidSchemaValueException("Should have at most " . $this->maxProperties . " properties got " . count($reflection->getProperties()), $path);
+            throw new InvalidSchemaValueException("Should have at most " . $this->maxProperties . " properties got " . count($reflection->getProperties()), $path, $dataPath);
         }
     }
 
