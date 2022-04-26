@@ -131,7 +131,8 @@ Results in the following JSON Schema:
             }
           ]
         }
-      }
+      },
+      "required": ["id", "names", "age", "sex", "father"]
     }
   },
   "allOf": [
@@ -147,7 +148,8 @@ Results in the following JSON Schema:
       "type": "string",
       "enum": ["weeeee!", "smash!", "hummmm!"]
     }
-  }
+  },
+  "required": ["superName", "power"]
 }
 ```
 

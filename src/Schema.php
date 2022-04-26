@@ -1345,6 +1345,7 @@ class Schema implements JsonSerializable
         }
 
         $properties = $classReflection->getProperties();
+        $required = [];
         foreach ($properties as $property) {
             // Ignore properties coming from parent class
             if (
@@ -1359,6 +1360,7 @@ class Schema implements JsonSerializable
 
             if ($propertySchema !== null) {
                 $schema->properties[$property->getName()] = $propertySchema->resolveRef($root);
+                $required[] = $property->getName();
             } else {
                 // Not annotated, try to infer something
                 $propertyType = $property->getType();
@@ -1424,6 +1426,7 @@ class Schema implements JsonSerializable
                     }
 
                     $schema->properties[$property->getName()] = $propertySchema;
+                    $required[] = $property->getName();
                 }
             }
 
@@ -1439,6 +1442,8 @@ class Schema implements JsonSerializable
                 $propertySchema->{$attribute->key} = $attribute->value;
             }
         }
+
+        $schema->required = $required;
 
         return $schema;
     }

@@ -60,7 +60,7 @@ class Person implements Model
         $this->father = $father;
     }
 
-    public static function fromJson(array $json): object
+    public static function fromJson(object $json): object
     {
         return new Person(
             $json['id'],
@@ -104,7 +104,7 @@ class Hero extends Person
         $this->power = $power;
     }
 
-    public static function fromJson(array $json): object
+    public static function fromJson(object $json): object
     {
         return new Hero(
             $json['id'],
@@ -136,7 +136,7 @@ final class GenerateJsonSchemaTest extends TestCase
                             'smash!',
                             'hummmm!',
                         ]
-                    ]
+                    ],
                 ],
                 'allOf' => [
                     [
@@ -181,9 +181,15 @@ final class GenerateJsonSchemaTest extends TestCase
                                     'other'
                                 ]
                             ]
+                        ],
+                        'required' => [
+                            'id', 'names', 'age', 'sex', 'father'
                         ]
                     ]
-                ]
+                ],
+                'required' => [
+                    'superName', 'power',
+                ],
             ],
             Schema::classSchema(Hero::class)->jsonSerialize()
         );
@@ -227,7 +233,7 @@ final class GenerateJsonSchemaTest extends TestCase
 
             $this->assertTrue(false);
         } catch (InvalidSchemaValueException $e) {
-            $this->assertEquals('Expected to be uuid got `dumpid` at #/allOf/0/#/$defs/Person/id', $e->getMessage());
+            $this->assertEquals('Expected to be uuid got `dumpid` at #/id', $e->getMessage());
         }
     }
 }
