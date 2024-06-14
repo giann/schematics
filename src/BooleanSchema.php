@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Giann\Schematics;
 
+use UnitEnum;
+
 //#[Attribute(Attribute::TARGET_PROPERTY)]
 /**
  * @Annotation
@@ -16,7 +18,7 @@ class BooleanSchema extends Schema
      * @param string|null $id
      * @param string|null $anchor
      * @param string|null $ref
-     * @param array|null $defs
+     * @param array<string,Schema|CircularReference|null> $defs
      * @param string|null $title
      * @param string|null $description
      * @param mixed $default
@@ -24,19 +26,20 @@ class BooleanSchema extends Schema
      * @param boolean|null $readOnly
      * @param boolean|null $writeOnly
      * @param mixed $const
-     * @param array|null $enum
+     * @param mixed[]|null $enum
      * @param Schema[]|null $allOf
      * @param Schema[]|null $oneOf
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
+     * @param class-string<UnitEnum>|null $enumClass
      */
     public function __construct(
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
         ?string $ref = null,
-        ?array $defs = null,
+        array $defs = [],
         ?string $description = null,
         $default = null,
         ?bool $deprecated = null,
@@ -48,27 +51,29 @@ class BooleanSchema extends Schema
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
-        ?string $enumPattern = null
+        ?string $enumPattern = null,
+        ?string $enumClass = null
     ) {
         parent::__construct(
-            Schema::TYPE_BOOLEAN,
-            $id,
-            $anchor,
-            $ref,
-            $defs,
-            $title,
-            $description,
-            $default,
-            $deprecated,
-            $readOnly,
-            $writeOnly,
-            $const,
-            $enum,
-            $allOf,
-            $oneOf,
-            $anyOf,
-            $not,
-            $enumPattern,
+            [Type::Boolean],
+            id: $id,
+            anchor: $anchor,
+            ref: $ref,
+            defs: $defs,
+            title: $title,
+            description: $description,
+            default: $default,
+            deprecated: $deprecated,
+            readOnly: $readOnly,
+            writeOnly: $writeOnly,
+            const: $const,
+            enum: $enum,
+            allOf: $allOf,
+            oneOf: $oneOf,
+            anyOf: $anyOf,
+            not: $not,
+            enumPattern: $enumPattern,
+            enumClass: $enumClass
         );
     }
 }

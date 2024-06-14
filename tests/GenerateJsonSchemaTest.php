@@ -4,60 +4,45 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Giann\Schematics\ArraySchema;
-use Giann\Schematics\InvalidSchemaValueException;
-use Giann\Schematics\Model;
-use Giann\Schematics\NumberSchema;
+use Giann\Schematics\Exception\InvalidSchemaValueException;
+use Giann\Schematics\Format;
+use Giann\Schematics\IntegerSchema;
 use Giann\Schematics\ObjectSchema;
+use Giann\Schematics\Property\Description;
 use Giann\Schematics\Schema;
 use Giann\Schematics\StringSchema;
-use Giann\Schematics\SchemaDescription;
+use Giann\Schematics\Validator;
 
-/**
- * @ObjectSchema
- */
-class Person implements Model
+enum Sex: string
 {
-    const SEX_MALE = 'male';
-    const SEX_FEMALE = 'female';
-    const SEX_OTHER = 'other';
+    case Male = 'male';
+    case Female = 'female';
+    case Other = 'other';
+}
 
-    /**
-     * @StringSchema(format = StringSchema::FORMAT_UUID)
-     * @SchemaDescription("unique id of the person")
-     */
-    public string $id;
-
-    /**
-     * @ArraySchema(items = @StringSchema, minContains = 1)
-     */
-    public array $names;
-
-    /**
-     * @NumberSchema(integer = true, minimum = 0)
-     */
-    public int $age;
-
-    // Enum from constants
-    /**
-     * @StringSchema(enumPattern = "Person::SEX_*")
-     */
-    public string $sex;
-
-    // Infered $ref to self
-    public ?Person $father = null;
-
+#[ObjectSchema()]
+class Person
+{
     public function __construct(
-        string $id,
-        array $names,
-        int $age,
-        string $sex,
-        ?Person $father = null
+        #[StringSchema(format: Format::Uuid)]
+        #[Description('unique id of the person')]
+        public string $id,
+
+        #[ArraySchema(
+            items: new StringSchema(),
+            minContains: 1
+        )]
+        public array $names,
+
+        #[IntegerSchema(minimum: 0)]
+        public int $age,
+
+        #[StringSchema(enumClass: Sex::class)]
+        public string $sex,
+
+        // Inferred $ref to self
+        public ?Person $father = null
     ) {
-        $this->id = $id;
-        $this->names = $names;
-        $this->age = $age;
-        $this->sex = $sex;
-        $this->father = $father;
     }
 
     public static function fromJson(object $json): object
@@ -72,36 +57,31 @@ class Person implements Model
     }
 }
 
+enum Power: string
+{
+    case Fly = 'weeeee!';
+    case Strong = 'smash!';
+    case Psychic = 'hummmm!';
+}
+
 // Infer $allOf Person
-/**
- * @ObjectSchema
- */
+#[ObjectSchema()]
 class Hero extends Person
 {
-    const POWER_FLY = 'weeeee!';
-    const POWER_STRONG = 'smash!';
-    const POWER_PSYCHIC = 'hummmm!';
-
-    // Infers string property
-    public string $superName;
-    /**
-     * @StringSchema(enumPattern = "Hero::POWER_*")
-     */
-    public string $power;
-
     public function __construct(
         string $id,
         array $names,
         int $age,
         string $sex,
         ?Person $father = null,
-        string $superName,
-        string $power
+
+        // Infers string property
+        public string $superName,
+
+        #[StringSchema(enumClass: Power::class)]
+        public string $power
     ) {
         parent::__construct($id, $names, $age, $sex, $father);
-
-        $this->superName = $superName;
-        $this->power = $power;
     }
 
     public static function fromJson(object $json): object
@@ -202,13 +182,13 @@ final class GenerateJsonSchemaTest extends TestCase
                 'f554a7c7-5c33-415f-a0ca-db19be81f868',
                 ['Bruce Banner'],
                 30,
-                Person::SEX_MALE,
+                Sex::Male->value,
                 null,
                 'Thor',
-                Hero::POWER_STRONG
+                Power::Strong->value
             );
 
-            Schema::validateInstance($thor);
+            (new Validator())->validateInstance($thor);
 
             $this->assertTrue(true);
         } catch (InvalidSchemaValueException $e) {
@@ -223,17 +203,17 @@ final class GenerateJsonSchemaTest extends TestCase
                 'dumpid',
                 ['Bruce Banner'],
                 30,
-                Person::SEX_MALE,
+                Sex::Male->value,
                 null,
                 'Thor',
-                Hero::POWER_STRONG
+                Power::Strong->value
             );
 
-            Schema::validateInstance($thor);
+            (new Validator())->validateInstance($thor);
 
             $this->assertTrue(false);
         } catch (InvalidSchemaValueException $e) {
-            $this->assertEquals('Expected to be uuid got `dumpid` at #/id', $e->getMessage());
+            $this->assertEquals('Expected to be uuid got `dumpid` at #/allOf/0/#/$defs/Person/id', $e->getMessage());
         }
     }
 }

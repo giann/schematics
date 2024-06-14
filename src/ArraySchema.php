@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace Giann\Schematics;
 
-//#[Attribute(Attribute::TARGET_PROPERTY)]
-/**
- * @Annotation
- * @NamedArgumentConstructor
- * @Target({"PROPERTY", "ANNOTATION"})
- */
+use Attribute;
+use UnitEnum;
+
+#[Attribute(Attribute::TARGET_PROPERTY)]
 class ArraySchema extends Schema
 {
     /**
      * @param string|null $id
      * @param string|null $anchor
      * @param string|null $ref
-     * @param array|null $defs
+     * @param array<string,Schema|CircularReference|null> $defs
      * @param string|null $title
      * @param string|null $description
      * @param mixed $default
@@ -24,13 +22,13 @@ class ArraySchema extends Schema
      * @param boolean|null $readOnly
      * @param boolean|null $writeOnly
      * @param mixed $const
-     * @param array|null $enum
+     * @param mixed[]|null $enum
      * @param Schema[]|null $allOf
      * @param Schema[]|null $oneOf
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
-     * 
+     * @param class-string<UnitEnum>|null $enumClass
      * @param Schema|null $items
      * @param Schema[]|null $prefixItems
      * @param Schema|null $contains
@@ -44,7 +42,7 @@ class ArraySchema extends Schema
         ?string $id = null,
         ?string $anchor = null,
         ?string $ref = null,
-        ?array $defs = null,
+        array $defs = [],
         ?string $description = null,
         $default = null,
         ?bool $deprecated = null,
@@ -57,46 +55,71 @@ class ArraySchema extends Schema
         ?array $anyOf = null,
         ?Schema $not = null,
         ?string $enumPattern = null,
+        ?string $enumClass = null,
 
-        $items = null,
-        ?array $prefixItems = null,
-        ?Schema $contains = null,
-        ?int $minContains = null,
-        ?int $maxContains = null,
-        ?int $minItems = null,
-        ?int $maxItems = null,
-        ?bool $uniqueItems = null,
-        $unevaluatedItems = null
+        public ?Schema $items = null,
+        public ?array $prefixItems = null,
+        public ?Schema $contains = null,
+        public ?int $minContains = null,
+        public ?int $maxContains = null,
+        public ?int $minItems = null,
+        public ?int $maxItems = null,
+        public ?bool $uniqueItems = null,
+        public ?Schema $unevaluatedItems = null
     ) {
         parent::__construct(
-            Schema::TYPE_ARRAY,
-            $id,
-            $anchor,
-            $ref,
-            $defs,
-            $title,
-            $description,
-            $default,
-            $deprecated,
-            $readOnly,
-            $writeOnly,
-            $const,
-            $enum,
-            $allOf,
-            $oneOf,
-            $anyOf,
-            $not,
-            $enumPattern,
-
-            $items,
-            $prefixItems,
-            $contains,
-            $minContains,
-            $maxContains,
-            $minItems,
-            $maxItems,
-            $uniqueItems,
-            $unevaluatedItems,
+            [Type::Array],
+            id: $id,
+            anchor: $anchor,
+            ref: $ref,
+            defs: $defs,
+            title: $title,
+            description: $description,
+            default: $default,
+            deprecated: $deprecated,
+            readOnly: $readOnly,
+            writeOnly: $writeOnly,
+            const: $const,
+            enum: $enum,
+            enumPattern: $enumPattern,
+            enumClass: $enumClass,
+            allOf: $allOf,
+            oneOf: $oneOf,
+            anyOf: $anyOf,
+            not: $not,
         );
+    }
+
+    protected function resolveRef(?Schema $root): Schema
+    {
+        parent::resolveRef($root);
+
+        if ($this->items instanceof Schema) {
+            $this->items->resolveRef($root);
+        }
+
+        foreach ($this->prefixItems ?? [] as $schema) {
+            $schema->resolveRef($root);
+        }
+
+        if ($this->contains instanceof Schema) {
+            $this->contains->resolveRef($root);
+        }
+
+        return $this;
+    }
+
+    public function jsonSerialize(): array
+    {
+        $serialized = parent::jsonSerialize();
+
+        return $serialized
+            + ($this->items !== null ? ['items' => $this->items->jsonSerialize()] : [])
+            + ($this->prefixItems !== null ? ['prefixItems' => $this->prefixItems] : [])
+            + ($this->contains !== null ? ['contains' => $this->contains->jsonSerialize()] : [])
+            + ($this->minContains !== null ? ['minContains' => $this->minContains] : [])
+            + ($this->maxContains !== null ? ['maxContains' => $this->maxContains] : [])
+            + ($this->uniqueItems !== null ? ['uniqueItems' => $this->uniqueItems] : [])
+            + ($this->unevaluatedItems !== null ? ['unevaluatedItems' => $this->unevaluatedItems->jsonSerialize()] : []);
     }
 }

@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace Giann\Schematics;
 
-//#[Attribute(Attribute::TARGET_PROPERTY)]
-/**
- * @Annotation
- * @NamedArgumentConstructor
- * @Target({"PROPERTY", "ANNOTATION"})
- */
+use Attribute;
+use UnitEnum;
+
+#[Attribute(Attribute::TARGET_PROPERTY)]
 class NumberSchema extends Schema
 {
     /**
      * @param string|null $id
      * @param string|null $anchor
      * @param string|null $ref
-     * @param array|null $defs
+     * @param array<string,Schema|CircularReference|null> $defs
      * @param string|null $title
      * @param string|null $description
      * @param mixed $default
@@ -24,28 +22,25 @@ class NumberSchema extends Schema
      * @param boolean|null $readOnly
      * @param boolean|null $writeOnly
      * @param mixed $const
-     * @param array|null $enum
+     * @param mixed[]|null $enum
      * @param Schema[]|null $allOf
      * @param Schema[]|null $oneOf
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
-     * 
-     * @param boolean $integer
-     * @param int|double|null $multipleOf
-     * @param int|double|null $minimum
-     * @param int|double|null $maximum
-     * @param int|double|null $exclusiveMinimum
-     * @param int|double|null $exclusiveMaximum
+     * @param class-string<UnitEnum>|null $enumClass
+     * @param int|float|null $multipleOf
+     * @param int|float|null $minimum
+     * @param int|float|null $maximum
+     * @param int|float|null $exclusiveMinimum
+     * @param int|float|null $exclusiveMaximum
      */
     public function __construct(
-        bool $integer = false,
-
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
         ?string $ref = null,
-        ?array $defs = null,
+        array $defs = [],
         ?string $description = null,
         $default = null,
         ?bool $deprecated = null,
@@ -58,48 +53,46 @@ class NumberSchema extends Schema
         ?array $anyOf = null,
         ?Schema $not = null,
         ?string $enumPattern = null,
+        ?string $enumClass = null,
 
-        $multipleOf = null,
-        $minimum = null,
-        $maximum = null,
-        $exclusiveMinimum = null,
-        $exclusiveMaximum = null
+        public int|float|null $multipleOf = null,
+        public int|float|null $minimum = null,
+        public int|float|null $maximum = null,
+        public int|float|null $exclusiveMinimum = null,
+        public int|float|null $exclusiveMaximum = null
     ) {
         parent::__construct(
-            $integer ? Schema::TYPE_INTEGER : Schema::TYPE_NUMBER,
-            $id,
-            $anchor,
-            $ref,
-            $defs,
-            $title,
-            $description,
-            $default,
-            $deprecated,
-            $readOnly,
-            $writeOnly,
-            $const,
-            $enum,
-            $allOf,
-            $oneOf,
-            $anyOf,
-            $not,
-            $enumPattern,
-
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-
-            $multipleOf,
-            $minimum,
-            $maximum,
-            $exclusiveMinimum,
-            $exclusiveMaximum,
+            [Type::Number],
+            id: $id,
+            anchor: $anchor,
+            ref: $ref,
+            defs: $defs,
+            title: $title,
+            description: $description,
+            default: $default,
+            deprecated: $deprecated,
+            readOnly: $readOnly,
+            writeOnly: $writeOnly,
+            const: $const,
+            enum: $enum,
+            allOf: $allOf,
+            oneOf: $oneOf,
+            anyOf: $anyOf,
+            not: $not,
+            enumPattern: $enumPattern,
+            enumClass: $enumClass,
         );
+    }
+
+    public function jsonSerialize(): array
+    {
+        $serialized = parent::jsonSerialize();
+
+        return $serialized
+            + ($this->multipleOf !== null ? ['multipleOf' => $this->multipleOf] : [])
+            + ($this->minimum !== null ? ['minimum' => $this->minimum] : [])
+            + ($this->maximum !== null ? ['maximum' => $this->maximum] : [])
+            + ($this->exclusiveMinimum !== null ? ['exclusiveMinimum' => $this->exclusiveMinimum] : [])
+            + ($this->exclusiveMaximum !== null ? ['exclusiveMaximum' => $this->exclusiveMaximum] : []);
     }
 }

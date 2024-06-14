@@ -1,6 +1,6 @@
 # schematics
 
-📏 Models that can be translated to JSON Schemas using attributes or docblock annotations.
+Translates php classes to JSON Schema by annotating them with attributes. Provides also validation.
 
 ## Validation
 
@@ -9,85 +9,64 @@
 ## Example
 
 ```php
-/**
- * @ObjectSchema
- */
+enum Sex: string
+{
+    case Male = 'male';
+    case Female = 'female';
+    case Other = 'other';
+}
+
+#[ObjectSchema()]
 class Person
 {
-    const SEX_MALE = 'male';
-    const SEX_FEMALE = 'female';
-    const SEX_OTHER = 'other';
-
-    /**
-     * @StringSchema(format = StringSchema::FORMAT_UUID)
-     * @SchemaDescription("unique id of the person")
-     */
-    public string $id;
-
-    /**
-     * @ArraySchema(items = @StringSchema, minContains = 1)
-     */
-    public array $names;
-
-    /**
-     * @NumberSchema(integer = true, minimum = 0)
-     */
-    public int $age;
-
-    // Enum from constants
-    /**
-     * @StringSchema(enumPattern = "Person::SEX_*")
-     */
-    public string $sex;
-
-    // Infered $ref to self
-    public ?Person $father = null;
-
     public function __construct(
-        string $id,
-        array $names,
-        int $age,
-        string $sex,
-        ?Person $father = null
+        #[StringSchema(format: Format::Uuid)]
+        #[Description('unique id of the person')]
+        public string $id,
+
+        #[ArraySchema(
+            items: new StringSchema(),
+            minContains: 1
+        )]
+        public array $names,
+
+        #[IntegerSchema(minimum: 0)]
+        public int $age,
+
+        #[StringSchema(enumClass: Sex::class)]
+        public string $sex,
+
+        // Inferred $ref to self
+        public ?Person $father = null
     ) {
-        $this->id = $id;
-        $this->names = $names;
-        $this->age = $age;
-        $this->sex = $sex;
-        $this->father = $father;
-    }
+	}
+}
+
+enum Power: string
+{
+    case Fly = 'weeeee!';
+    case Strong = 'smash!';
+    case Psychic = 'hummmm!';
 }
 
 // Infer $allOf Person
-/**
- * @ObjectSchema
- */
+#[ObjectSchema()]
 class Hero extends Person
 {
-    const POWER_FLY = 'weeeee!';
-    const POWER_STRONG = 'smash!';
-    const POWER_PSYCHIC = 'hummmm!';
-
-    // Infers string property
-    public string $superName;
-    /**
-     * @StringSchema(enumPattern = "Hero::POWER_*")
-     */
-    public string $power;
-
     public function __construct(
         string $id,
         array $names,
         int $age,
         string $sex,
         ?Person $father = null,
-        string $superName,
-        string $power
+
+        // Infers string property
+        public string $superName,
+
+        #[StringSchema(enumClass: Power::class)]
+        public string $power
     ) {
         parent::__construct($id, $names, $age, $sex, $father);
-
-        $this->superName = $superName;
-        $this->power = $power;
     }
 }
 ```

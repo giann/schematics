@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Giann\Schematics;
+
+enum Type: string
+{
+    case String = 'string';
+    case Number = 'number';
+    case Integer = 'integer';
+    case Object = 'object';
+    case Array = 'array';
+    case Boolean = 'boolean';
+    case Null = 'null';
+}

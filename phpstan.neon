@@ -1,0 +1,12 @@
+parameters:
+    phpVersion: 80100
+    level: 9
+    paths:
+        - src
+    excludePaths:
+        - tests
+        - vendor
+
+    fileExtensions:
+        - php
+    tmpDir: /tmp

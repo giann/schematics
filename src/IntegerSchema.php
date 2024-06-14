@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Giann\Schematics;
 
 use Attribute;
+use PhpParser\Builder\EnumCase;
 use UnitEnum;
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
-class StringSchema extends Schema
+class IntegerSchema extends Schema
 {
     /**
      * @param string|null $id
@@ -29,12 +30,11 @@ class StringSchema extends Schema
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
-     * @param Format|null $format
-     * @param integer|null $minLength
-     * @param integer|null $maxLength
-     * @param string|null $pattern
-     * @param ContentEnconding|null $contentEncoding
-     * @param string|null $contentMediaType
+     * @param int|null $multipleOf
+     * @param int|null $minimum
+     * @param int|null $maximum
+     * @param int|null $exclusiveMinimum
+     * @param int|null $exclusiveMaximum
      */
     public function __construct(
         ?string $title = null,
@@ -56,15 +56,14 @@ class StringSchema extends Schema
         ?string $enumPattern = null,
         ?string $enumClass = null,
 
-        public ?Format $format = null,
-        public ?int $minLength = null,
-        public ?int $maxLength = null,
-        public ?string $pattern = null,
-        public ?ContentEnconding $contentEncoding = null,
-        public ?string $contentMediaType = null
+        public int|float|null $multipleOf = null,
+        public int|float|null $minimum = null,
+        public int|float|null $maximum = null,
+        public int|float|null $exclusiveMinimum = null,
+        public int|float|null $exclusiveMaximum = null
     ) {
         parent::__construct(
-            [Type::String],
+            [Type::Integer],
             id: $id,
             anchor: $anchor,
             ref: $ref,
@@ -77,12 +76,12 @@ class StringSchema extends Schema
             writeOnly: $writeOnly,
             const: $const,
             enum: $enum,
-            enumPattern: $enumPattern,
-            enumClass: $enumClass,
             allOf: $allOf,
             oneOf: $oneOf,
             anyOf: $anyOf,
             not: $not,
+            enumPattern: $enumPattern,
+            enumClass: $enumClass,
         );
     }
 
@@ -91,11 +90,10 @@ class StringSchema extends Schema
         $serialized = parent::jsonSerialize();
 
         return $serialized
-            + ($this->format !== null ? ['format' => $this->format->value] : [])
-            + ($this->minLength !== null ? ['minLength' => $this->minLength] : [])
-            + ($this->maxLength !== null ? ['maxLength' => $this->maxLength] : [])
-            + ($this->pattern !== null ? ['pattern' => $this->pattern] : [])
-            + ($this->contentEncoding !== null ? ['contentEncoding' => $this->contentEncoding] : [])
-            + ($this->contentMediaType !== null ? ['contentMediaType' => $this->contentMediaType] : []);
+            + ($this->multipleOf !== null ? ['multipleOf' => $this->multipleOf] : [])
+            + ($this->minimum !== null ? ['minimum' => $this->minimum] : [])
+            + ($this->maximum !== null ? ['maximum' => $this->maximum] : [])
+            + ($this->exclusiveMinimum !== null ? ['exclusiveMinimum' => $this->exclusiveMinimum] : [])
+            + ($this->exclusiveMaximum !== null ? ['exclusiveMaximum' => $this->exclusiveMaximum] : []);
     }
 }
