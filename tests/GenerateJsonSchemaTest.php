@@ -40,20 +40,12 @@ class Person
         #[StringSchema(enumClass: Sex::class)]
         public string $sex,
 
+        // Inferred oneOf type
+        public string|int $height,
+
         // Inferred $ref to self
         public ?Person $father = null
     ) {
-    }
-
-    public static function fromJson(object $json): object
-    {
-        return new Person(
-            $json['id'],
-            $json['names'],
-            $json['age'],
-            $json['sex'],
-            isset($json['father']) ? Person::fromJson($json) : null,
-        );
     }
 }
 
@@ -73,28 +65,16 @@ class Hero extends Person
         array $names,
         int $age,
         string $sex,
+        string|int $height,
         ?Person $father = null,
 
-        // Infers string property
+        // Inferred string property
         public string $superName,
 
         #[StringSchema(enumClass: Power::class)]
-        public string $power
+        public string $power,
     ) {
-        parent::__construct($id, $names, $age, $sex, $father);
-    }
-
-    public static function fromJson(object $json): object
-    {
-        return new Hero(
-            $json['id'],
-            $json['names'],
-            $json['age'],
-            $json['sex'],
-            isset($json['father']) ? Person::fromJson($json) : null,
-            $json['superName'],
-            $json['power']
-        );
+        parent::__construct($id, $names, $age, $sex, $height, $father);
     }
 }
 
@@ -160,10 +140,20 @@ final class GenerateJsonSchemaTest extends TestCase
                                     'female',
                                     'other'
                                 ]
+                            ],
+                            'height' => [
+                                'oneOf' => [
+                                    [
+                                        'type' => 'string'
+                                    ],
+                                    [
+                                        'type' => 'integer'
+                                    ]
+                                ]
                             ]
                         ],
                         'required' => [
-                            'id', 'names', 'age', 'sex', 'father'
+                            'id', 'names', 'age', 'sex', 'height', 'father'
                         ]
                     ]
                 ],
@@ -179,13 +169,14 @@ final class GenerateJsonSchemaTest extends TestCase
     {
         try {
             $thor = new Hero(
-                'f554a7c7-5c33-415f-a0ca-db19be81f868',
-                ['Bruce Banner'],
-                30,
-                Sex::Male->value,
-                null,
-                'Thor',
-                Power::Strong->value
+                id: 'f554a7c7-5c33-415f-a0ca-db19be81f868',
+                names: ['Bruce Banner'],
+                age: 30,
+                sex: Sex::Male->value,
+                height: 174,
+                superName: 'Thor',
+                power: Power::Strong->value,
+                father: null
             );
 
             (new Validator())->validateInstance($thor);
@@ -200,13 +191,14 @@ final class GenerateJsonSchemaTest extends TestCase
     {
         try {
             $thor = new Hero(
-                'dumpid',
-                ['Bruce Banner'],
-                30,
-                Sex::Male->value,
-                null,
-                'Thor',
-                Power::Strong->value
+                id: 'dumpid',
+                names: ['Bruce Banner'],
+                age: 30,
+                sex: Sex::Male->value,
+                height: '174',
+                superName: 'Thor',
+                power: Power::Strong->value,
+                father: null
             );
 
             (new Validator())->validateInstance($thor);

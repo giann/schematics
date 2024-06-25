@@ -14,6 +14,9 @@ use ReflectionEnum;
 use ReflectionEnumBackedCase;
 use ReflectionNamedType;
 use ReflectionException;
+use ReflectionIntersectionType;
+use ReflectionType;
+use ReflectionUnionType;
 use UnitEnum;
 
 // Use to differenciate a property with a null value from the absence of the property. ex: { "const": null }
@@ -294,58 +297,18 @@ class Schema implements JsonSerializable
                 $schema->properties[$property->getName()] = $propertySchema->resolveRef($root);
                 $required[] = $property->getName();
             } else {
+                $type = $property->getType();
+
                 // Not annotated, try to infer something
-                $propertyType = $property->getType();
-                /** @var ?Schema */
-                $propertySchema = null;
-
-                if ($propertyType instanceof ReflectionNamedType) {
-                    $type = $propertyType->getName();
-
-                    // TODO: ReflectioUnionType and ReflectionIntersectionType should result in multi-typed schema
-
-                    switch ($type) {
-                        case 'string':
-                            $propertySchema = new StringSchema();
-                            break;
-                        case 'int':
-                            $propertySchema = new IntegerSchema();
-                            break;
-                        case 'double':
-                            $propertySchema = new NumberSchema();
-                            break;
-                        case 'array':
-                            $propertySchema = new ArraySchema();
-                            break;
-                        case 'bool':
-                            $propertySchema = new BooleanSchema();
-                            break;
-                        case 'object':
-                            $propertySchema = new ObjectSchema();
-                            break;
-                        default:
-                            // Is it a class?
-
-                            // Is it a circular reference to root schema ?
-                            if ($type === $classReflection->getName()) {
-                                $type = $root == $schema ? '#' : $type;
-                            }
-
-                            $propertySchema = (new Schema(ref: $type))->resolveRef($root);
-                    }
-
-                    if ($propertyType->allowsNull()) {
-                        $propertySchema = new Schema(
-                            oneOf: [
-                                new NullSchema(),
-                                $propertySchema
-                            ]
-                        );
-                    }
-
-                    $schema->properties[$property->getName()] = $propertySchema;
-                    $required[] = $property->getName();
-                }
+                $schema->properties[$property->getName()] = $type !== null
+                    ? static::inferType(
+                        $schema,
+                        $root,
+                        $classReflection,
+                        $type
+                    )
+                    : new Schema();
+                $required[] = $property->getName();
             }
 
             foreach ($propertySchemaProperties as $attribute) {
@@ -356,6 +319,91 @@ class Schema implements JsonSerializable
         $schema->required = $required;
 
         return $schema;
+    }
+
+    /**
+     * @param Schema $current
+     * @param Schema $root
+     * @param ReflectionClass<object> $classReflection
+     * @param ReflectionType $typeReflection
+     * @return Schema
+     */
+    public static function inferType(
+        Schema $current,
+        Schema $root,
+        ReflectionClass $classReflection,
+        ReflectionType $typeReflection
+    ): Schema {
+        if ($typeReflection instanceof ReflectionNamedType) {
+            switch ($typeReflection->getName()) {
+                case 'string':
+                    $propertySchema = new StringSchema();
+                    break;
+                case 'int':
+                    $propertySchema = new IntegerSchema();
+                    break;
+                case 'double':
+                    $propertySchema = new NumberSchema();
+                    break;
+                case 'array':
+                    $propertySchema = new ArraySchema();
+                    break;
+                case 'bool':
+                    $propertySchema = new BooleanSchema();
+                    break;
+                case 'object':
+                    $propertySchema = new ObjectSchema();
+                    break;
+                case 'mixed':
+                    $propertySchema = new Schema();
+                    break;
+                default:
+                    // Is it a circular reference to root schema ?
+                    if ($typeReflection->getName() === $classReflection->getName()) {
+                        $type = $root == $current ? '#' : $typeReflection->getName();
+                        $propertySchema = (new Schema(ref: $type))->resolveRef($root);
+                    } elseif (class_exists($typeReflection->getName())) { // Is it a class?
+                        $propertySchema = (new Schema(ref: $typeReflection->getName()))->resolveRef($root);
+                    } else {
+                        throw new InvalidSchemaException('Could not infer json schema type of type ' . $typeReflection->getName());
+                    }
+            }
+
+            if ($typeReflection->allowsNull()) {
+                $propertySchema = new Schema(
+                    oneOf: [
+                        new NullSchema(),
+                        $propertySchema
+                    ]
+                );
+            }
+
+            return $propertySchema;
+        }
+
+        if ($typeReflection instanceof ReflectionUnionType) {
+            $oneOf = [];
+            foreach ($typeReflection->getTypes() as $subTypeReflection) {
+                $oneOf[] = static::inferType($current, $root, $classReflection, $subTypeReflection);
+            }
+
+            return new Schema(
+                oneOf: $oneOf
+            );
+        }
+
+        if ($typeReflection instanceof ReflectionIntersectionType) {
+            $allOf = [];
+            foreach ($typeReflection->getTypes() as $subTypeReflection) {
+                $allOf[] = static::inferType($current, $root, $classReflection, $subTypeReflection);
+            }
+
+            return new Schema(
+                allOf: $allOf
+            );
+        }
+
+        return new Schema();
     }
 
     /** @return array<string,mixed> */
