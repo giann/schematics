@@ -163,7 +163,6 @@ class ObjectSchema extends Schema
 
         return $serialized
             + ($properties !== null ? ['properties' => $properties] : [])
-            + ($patternProperties !== null ? ['pattern$patternProperties' => $patternProperties] : [])
             + ($this->additionalProperties !== null ?
                 [
                     'additionalProperties' => $this->additionalProperties
