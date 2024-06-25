@@ -18,6 +18,7 @@ class IntegerSchema extends Schema
      * @param array<string,Schema|CircularReference|null> $defs
      * @param string|null $title
      * @param string|null $description
+     * @param mixed[]|null $examples
      * @param mixed $default
      * @param boolean|null $deprecated
      * @param boolean|null $readOnly
@@ -43,6 +44,7 @@ class IntegerSchema extends Schema
         ?string $ref = null,
         array $defs = [],
         ?string $description = null,
+        ?array $examples = null,
         $default = null,
         ?bool $deprecated = null,
         ?bool $readOnly = null,
@@ -70,6 +72,7 @@ class IntegerSchema extends Schema
             defs: $defs,
             title: $title,
             description: $description,
+            examples: $examples,
             default: $default,
             deprecated: $deprecated,
             readOnly: $readOnly,

@@ -45,6 +45,7 @@ class Schema implements JsonSerializable
      * @param array<string,Schema|CircularReference|null> $defs Reserves a location for schema authors to inline re-usable JSON Schemas into a more general schema
      * @param string|null $title
      * @param string|null $description
+     * @param mixed[]|null $examples
      * @param mixed $default
      * @param boolean|null $deprecated Indicates that applications should refrain from usage of the declared property
      * @param boolean|null $readOnly Indicates that the value of the instance is managed exclusively by the server or the owning authority, and attempts by a user agent to modify the value of this property are expected to be ignored or rejected by a server
@@ -66,6 +67,7 @@ class Schema implements JsonSerializable
         public array $defs = [],
         public ?string $title = null,
         public ?string $description = null,
+        public ?array $examples = null,
         public mixed $default = null,
         public ?bool $deprecated = null,
         public ?bool $readOnly = null,
@@ -307,9 +309,7 @@ class Schema implements JsonSerializable
                 }
             } else {
                 $type = $property->getType();
-
-                // Not annotated, try to infer something
-                $schema->properties[$property->getName()] = $type !== null
+                $propertySchema = $type !== null
                     ? static::inferType(
                         $schema,
                         $root,
@@ -317,6 +317,9 @@ class Schema implements JsonSerializable
                         $type
                     )
                     : new Schema();
+
+                // Not annotated, try to infer something
+                $schema->properties[$property->getName()] = $propertySchema;
                 if ($isRequired) {
                     $required[] = $property->getName();
                 }
