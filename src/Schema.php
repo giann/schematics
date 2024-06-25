@@ -277,6 +277,13 @@ class Schema implements JsonSerializable
                 $property->getAttributes()
             );
 
+            $isRequired = count(
+                array_filter(
+                    $propertyAttributes,
+                    fn ($attr) => $attr instanceof NotRequired
+                )
+            ) == 0;
+
             $propertySchemaProperties = array_filter(
                 $propertyAttributes,
                 fn ($attr) => $attr instanceof Property
@@ -295,7 +302,9 @@ class Schema implements JsonSerializable
 
             if ($propertySchema !== null) {
                 $schema->properties[$property->getName()] = $propertySchema->resolveRef($root);
-                $required[] = $property->getName();
+                if ($isRequired) {
+                    $required[] = $property->getName();
+                }
             } else {
                 $type = $property->getType();
 
@@ -308,7 +317,9 @@ class Schema implements JsonSerializable
                         $type
                     )
                     : new Schema();
-                $required[] = $property->getName();
+                if ($isRequired) {
+                    $required[] = $property->getName();
+                }
             }
 
             foreach ($propertySchemaProperties as $attribute) {

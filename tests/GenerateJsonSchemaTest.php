@@ -7,6 +7,7 @@ use Giann\Schematics\ArraySchema;
 use Giann\Schematics\Exception\InvalidSchemaValueException;
 use Giann\Schematics\Format;
 use Giann\Schematics\IntegerSchema;
+use Giann\Schematics\NotRequired;
 use Giann\Schematics\ObjectSchema;
 use Giann\Schematics\Property\Description;
 use Giann\Schematics\Schema;
@@ -44,6 +45,7 @@ class Person
         public string|int $height,
 
         // Inferred $ref to self
+        #[NotRequired]
         public ?Person $father = null
     ) {
     }
@@ -66,13 +68,14 @@ class Hero extends Person
         int $age,
         string $sex,
         string|int $height,
-        ?Person $father = null,
 
         // Inferred string property
         public string $superName,
 
         #[StringSchema(enumClass: Power::class)]
         public string $power,
+
+        ?Person $father = null,
     ) {
         parent::__construct($id, $names, $age, $sex, $height, $father);
     }
@@ -153,7 +156,7 @@ final class GenerateJsonSchemaTest extends TestCase
                             ]
                         ],
                         'required' => [
-                            'id', 'names', 'age', 'sex', 'height', 'father'
+                            'id', 'names', 'age', 'sex', 'height'
                         ]
                     ]
                 ],
@@ -176,7 +179,6 @@ final class GenerateJsonSchemaTest extends TestCase
                 height: 174,
                 superName: 'Thor',
                 power: Power::Strong->value,
-                father: null
             );
 
             (new Validator())->validateInstance($thor);
@@ -198,7 +200,6 @@ final class GenerateJsonSchemaTest extends TestCase
                 height: '174',
                 superName: 'Thor',
                 power: Power::Strong->value,
-                father: null
             );
 
             (new Validator())->validateInstance($thor);
