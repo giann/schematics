@@ -312,6 +312,16 @@ class Schema implements JsonSerializable
                 $property->getAttributes()
             );
 
+            // Property excluded from json schema ?
+            if (count(
+                array_filter(
+                    $propertyAttributes,
+                    fn ($attr) => $attr instanceof ExcludedFromSchema
+                )
+            ) > 0) {
+                continue;
+            }
+
             $isRequired = count(
                 array_filter(
                     $propertyAttributes,

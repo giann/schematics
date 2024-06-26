@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use Giann\Schematics\ArraySchema;
 use Giann\Schematics\Exception\InvalidSchemaValueException;
+use Giann\Schematics\ExcludedFromSchema;
 use Giann\Schematics\Format;
 use Giann\Schematics\IntegerSchema;
 use Giann\Schematics\NotRequired;
@@ -44,9 +45,12 @@ class Person
         // Inferred oneOf type
         public string|int $height,
 
+        #[ExcludedFromSchema]
+        public string $ignoreMe,
+
         // Inferred $ref to self
         #[NotRequired]
-        public ?Person $father = null
+        public ?Person $father = null,
     ) {
     }
 }
@@ -77,7 +81,7 @@ class Hero extends Person
 
         ?Person $father = null,
     ) {
-        parent::__construct($id, $names, $age, $sex, $height, $father);
+        parent::__construct($id, $names, $age, $sex, $height, 'ignore me', $father);
     }
 }
 
