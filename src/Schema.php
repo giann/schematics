@@ -201,18 +201,57 @@ class Schema implements JsonSerializable
         return $result;
     }
 
+    public static function hasSchema(string $class): bool
+    {
+        if (!class_exists($class)) {
+            return false;
+        }
+
+        $classReflection = new ReflectionClass($class);
+
+        $schemaAttributes = array_filter(
+            array_map(
+                fn ($attribute) => $attribute->newInstance(),
+                $classReflection->getAttributes()
+            ),
+            fn ($attribute) => $attribute instanceof ObjectSchema,
+        );
+
+        if (empty($schemaAttributes)) {
+            return false;
+        }
+
+        if (count($schemaAttributes) > 1) {
+            throw new InvalidArgumentException('The class ' . $class . ' has more than one object schema attribute');
+        }
+
+        if (!($schemaAttributes[0] instanceof ObjectSchema)) {
+            return false;
+        }
+
+        return true;
+    }
+
     public static function classSchema(string $class, ?Schema $root = null): ?Schema
     {
         if ($class === '#') {
             return new Schema(id: '#');
         }
 
-        assert(class_exists($class));
+        if (!class_exists($class)) {
+            return null;
+        }
 
         $classReflection = new ReflectionClass($class);
+        $attributes = array_map(
+            fn ($attribute) => $attribute->newInstance(),
+            $classReflection->getAttributes()
+        );
 
-        $schemaAttributes = $classReflection->getAttributes();
-        $reflectionAttributes = $classReflection->getAttributes();
+        $schemaAttributes = array_filter(
+            $attributes,
+            fn ($attribute) => $attribute instanceof ObjectSchema,
+        );
 
         if (empty($schemaAttributes)) {
             return null;
@@ -222,27 +261,21 @@ class Schema implements JsonSerializable
             throw new InvalidArgumentException('The class ' . $class . ' has more than one object schema attribute');
         }
 
-        $schema = $schemaAttributes[0]->newInstance();
+        $schema = $schemaAttributes[0];
 
         if (!($schema instanceof ObjectSchema)) {
             return null;
         }
 
         // Attribute annotations
-        /** @var object[] */
-        $attributes = array_map(
-            fn ($attribute) => $attribute->newInstance(),
-            $reflectionAttributes,
-        );
-
         /** @var Property[] */
-        $schemaAttributes = array_filter(
+        $schemaProperties = array_filter(
             $attributes,
             fn ($attribute) => $attribute instanceof Property,
         );
 
-        foreach ($schemaAttributes as $attribute) {
-            $schema->{$attribute->key} = $attribute->value;
+        foreach ($schemaProperties as $property) {
+            $schema->{$property->key} = $property->value;
         }
 
         $root = $root ?? $schema;
