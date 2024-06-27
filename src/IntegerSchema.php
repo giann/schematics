@@ -57,11 +57,11 @@ class IntegerSchema extends Schema
         ?string $enumPattern = null,
         ?string $enumClass = null,
 
-        public int|float|null $multipleOf = null,
-        public int|float|null $minimum = null,
-        public int|float|null $maximum = null,
-        public int|float|null $exclusiveMinimum = null,
-        public int|float|null $exclusiveMaximum = null
+        public int|null $multipleOf = null,
+        public int|null $minimum = null,
+        public int|null $maximum = null,
+        public int|null $exclusiveMinimum = null,
+        public int|null $exclusiveMaximum = null
     ) {
         parent::__construct(
             [Type::Integer],
