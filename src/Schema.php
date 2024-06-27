@@ -52,12 +52,12 @@ class Schema implements JsonSerializable
      * @param boolean|null $writeOnly Indicates that the value is never present when the instance is retrieved from the owning authority
      * @param mixed $const Restrict a value to a single value
      * @param mixed[]|null $enum An instance validates successfully against this keyword if its value is equal to one of the elements in this keyword's array value
-     * @param Schema[]|null $allOf
-     * @param Schema[]|null $oneOf
-     * @param Schema[]|null $anyOf
-     * @param Schema|null $not
-     * @param string|null $enumPattern
-     * @param class-string<UnitEnum>|null $enumClass
+     * @param Schema[]|null $allOf An instance validates successfully against this keyword if it validates successfully against all schemas defined by this keyword's value
+     * @param Schema[]|null $oneOf An instance validates successfully against this keyword if it validates successfully against exactly one schema defined by this keyword's value
+     * @param Schema[]|null $anyOf An instance validates successfully against this keyword if it validates successfully against at least one schema defined by this keyword's value
+     * @param Schema|null $not An instance is valid against this keyword if it fails to validate successfully against the schema defined by this keyword
+     * @param string|null $enumPattern Builds enum field using a list of constant matching this pattern (ex: 'MyClass::VALUE_*')
+     * @param class-string<UnitEnum>|null $enumClass Builds enum field using a php enum 
      */
     public function __construct(
         public array $type = [],

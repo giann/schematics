@@ -30,16 +30,16 @@ class ObjectSchema extends Schema
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
-     * @param array<string,Schema>|null $properties
-     * @param array<string,Schema>|null $patternProperties
-     * @param Schema|false|null $additionalProperties
-     * @param Schema|null $unevaluatedProperties
-     * @param string[]|null $required
-     * @param Schema|null $propertyNames
-     * @param integer|null $minProperties
-     * @param integer|null $maxProperties
-     * @param array<string,Schema>|null $dependentSchemas
-     * @param ?array<string,string[]> $dependentRequired
+     * @param array<string,Schema>|null $properties Validation succeeds if, for each name that appears in both the instance and as a name within this keyword's value, the child instance for that name successfully validates against the corresponding schema
+     * @param array<string,Schema>|null $patternProperties Validation succeeds if, for each instance name that matches any regular expressions that appear as a property name in this keyword's value, the child instance for that name successfully validates against each schema that corresponds to a matching regular expression
+     * @param Schema|false|null $additionalProperties Validation succeeds if, for properties not matched by "properties" and "patternProperties", the child instance validates against the "additionalProperties" schema
+     * @param Schema|null $unevaluatedProperties Applies to properties not matched by "properties", "patternProperties" and "additionalProperties"
+     * @param string[]|null $required An object instance is valid against this keyword if every item in the array is the name of a property in the instance
+     * @param Schema|null $propertyNames If the instance is an object, this keyword validates if every property name in the instance validates against the provided schema. Note the property name that the schema is testing will always be a string
+     * @param integer|null $minProperties An object instance is valid against "minProperties" if its number of properties is greater than, or equal to, the value of this keyword
+     * @param integer|null $maxProperties An object instance is valid against "maxProperties" if its number of properties is less than, or equal to, the value of this keyword
+     * @param array<string,Schema>|null $dependentSchemas If the object key is a property in the instance, the entire instance must validate against the subschema. Its use is dependent on the presence of the property
+     * @param ?array<string,string[]> $dependentRequired Validation succeeds if, for each name that appears in both the instance and as a name within this keyword's value, every item in the corresponding array is also the name of a property in the instance
      */
     public function __construct(
         ?string $title = null,

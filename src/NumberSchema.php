@@ -30,11 +30,11 @@ class NumberSchema extends Schema
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
-     * @param int|float|null $multipleOf
-     * @param int|float|null $minimum
-     * @param int|float|null $maximum
-     * @param int|float|null $exclusiveMinimum
-     * @param int|float|null $exclusiveMaximum
+     * @param int|float|null $multipleOf A numeric instance is valid only if division by this keyword's value results in an integer
+     * @param int|float|null $minimum Validates only if the instance is greater than or exactly equal to "minimum"
+     * @param int|float|null $maximum Validates only if the instance is less than or exactly equal to "maximum"
+     * @param int|float|null $exclusiveMinimum If the instance is a number, then the instance is valid only if it has a value strictly greater than (not equal to) "exclusiveMinimum"
+     * @param int|float|null $exclusiveMaximum If the instance is a number, then the instance is valid only if it has a value strictly less than (not equal to) "exclusiveMaximum"
      */
     public function __construct(
         ?string $title = null,

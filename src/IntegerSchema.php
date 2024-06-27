@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Giann\Schematics;
 
 use Attribute;
-use PhpParser\Builder\EnumCase;
 use UnitEnum;
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
@@ -31,11 +30,11 @@ class IntegerSchema extends Schema
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
-     * @param int|null $multipleOf
-     * @param int|null $minimum
-     * @param int|null $maximum
-     * @param int|null $exclusiveMinimum
-     * @param int|null $exclusiveMaximum
+     * @param int|null $multipleOf A numeric instance is valid only if division by this keyword's value results in an integer
+     * @param int|null $minimum Validates only if the instance is greater than or exactly equal to "minimum"
+     * @param int|null $maximum Validates only if the instance is less than or exactly equal to "maximum"
+     * @param int|null $exclusiveMinimum If the instance is a number, then the instance is valid only if it has a value strictly greater than (not equal to) "exclusiveMinimum"
+     * @param int|null $exclusiveMaximum If the instance is a number, then the instance is valid only if it has a value strictly less than (not equal to) "exclusiveMaximum"
      */
     public function __construct(
         ?string $title = null,

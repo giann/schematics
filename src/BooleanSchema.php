@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace Giann\Schematics;
 
+use Attribute;
 use UnitEnum;
 
-//#[Attribute(Attribute::TARGET_PROPERTY)]
-/**
- * @Annotation
- * @NamedArgumentConstructor
- * @Target({"PROPERTY", "ANNOTATION"})
- */
+#[Attribute(Attribute::TARGET_PROPERTY)]
 class BooleanSchema extends Schema
 {
     /**

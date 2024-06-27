@@ -30,12 +30,13 @@ class StringSchema extends Schema
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
-     * @param Format|null $format
-     * @param integer|null $minLength
-     * @param integer|null $maxLength
-     * @param string|null $pattern
-     * @param ContentEnconding|null $contentEncoding
-     * @param string|null $contentMediaType
+     * @param Format|null $format Predefined format to which the string must conform
+     * @param integer|null $minLength A string instance is valid against this keyword if its length is greater than, or equal to, the value of this keyword
+     * @param integer|null $maxLength A string instance is valid against this keyword if its length is less than, or equal to, the value of this keyword
+     * @param string|null $pattern A string instance is considered valid if the regular expression matches the instance successfully
+     * @param ContentEnconding|null $contentEncoding If the instance value is a string, this property defines that the string SHOULD be interpreted as binary data and decoded using the encoding named by this property
+     * @param string|null $contentMediaType If the instance is a string, this property indicates the media type of the contents of the string. If "contentEncoding" is present, this property describes the decoded string
+     * @param Schema|null $contentSchema If the instance is a string, and if "contentMediaType" is present, this property contains a schema which describes the structure of the string
      */
     public function __construct(
         ?string $title = null,
@@ -63,7 +64,8 @@ class StringSchema extends Schema
         public ?int $maxLength = null,
         public ?string $pattern = null,
         public ?ContentEnconding $contentEncoding = null,
-        public ?string $contentMediaType = null
+        public ?string $contentMediaType = null,
+        public ?Schema $contentSchema = null,
     ) {
         parent::__construct(
             [Type::String],
@@ -99,6 +101,7 @@ class StringSchema extends Schema
             + ($this->maxLength !== null ? ['maxLength' => $this->maxLength] : [])
             + ($this->pattern !== null ? ['pattern' => $this->pattern] : [])
             + ($this->contentEncoding !== null ? ['contentEncoding' => $this->contentEncoding] : [])
-            + ($this->contentMediaType !== null ? ['contentMediaType' => $this->contentMediaType] : []);
+            + ($this->contentMediaType !== null ? ['contentMediaType' => $this->contentMediaType] : [])
+            + ($this->contentSchema !== null ? ['contentSchema' => $this->contentSchema->jsonSerialize()] : []);
     }
 }

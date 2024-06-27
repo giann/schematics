@@ -30,13 +30,13 @@ class ArraySchema extends Schema
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
-     * @param Schema|null $items
-     * @param Schema[]|null $prefixItems
-     * @param Schema|null $contains
-     * @param integer|null $minContains
-     * @param integer|null $maxContains
-     * @param boolean|null $uniqueItems
-     * @param null|Schema $unevaluatedItems
+     * @param Schema|null $items Applies its subschema to all instance elements at indexes greater than the length of the "prefixItems" array in the same schema object, as reported by the annotation result of that "prefixItems" keyword. If no such annotation result exists, "items" applies its subschema to all instance array elements
+     * @param Schema[]|null $prefixItems Validation succeeds if each element of the instance validates against the schema at the same position, if any
+     * @param Schema|null $contains An array instance is valid against "contains" if at least one of its elements is valid against the given schema
+     * @param integer|null $minContains An instance array is valid against "minContains" in two ways, depending on the form of the annotation result of an adjacent "contains" keyword. The first way is if the annotation result is an array and the length of that array is greater than or equal to the "minContains" value. The second way is if the annotation result is a boolean "true" and the instance array length is greater than or equal to the "minContains" value
+     * @param integer|null $maxContains An instance array is valid against "maxContains" in two ways, depending on the form of the annotation result of an adjacent "contains" keyword. The first way is if the annotation result is an array and the length of that array is less than or equal to the "maxContains" value. The second way is if the annotation result is a boolean "true" and the instance array length is less than or equal to the "maxContains" value
+     * @param boolean|null $uniqueItems If this keyword has boolean value false, the instance validates successfully. If it has boolean value true, the instance validates successfully if all of its elements are unique
+     * @param null|Schema $unevaluatedItems Applies to items not evaluated by "prefixItems", "items" or "contains"
      */
     public function __construct(
         ?string $title = null,
