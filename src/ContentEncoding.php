@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Giann\Schematics;
 
-enum ContentEnconding: string
+enum ContentEncoding: string
 {
     case SevenBit = '7bit';
     case HeightBit = '8bit';
