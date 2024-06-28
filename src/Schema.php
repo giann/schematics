@@ -373,7 +373,7 @@ class Schema implements JsonSerializable
             }
         }
 
-        $schema->required = $required;
+        $schema->required = !empty($required) ? $required : null;
 
         return $schema;
     }
