@@ -23,7 +23,7 @@ enum Sex: string
 }
 
 #[ObjectSchema]
-class Person
+class Person implements JsonSerializable
 {
     public function __construct(
         #[StringSchema(format: Format::Uuid)]
@@ -39,8 +39,7 @@ class Person
         #[IntegerSchema(minimum: 0)]
         public int $age,
 
-        #[StringSchema(enumClass: Sex::class)]
-        public string $sex,
+        public Sex $sex,
 
         // Inferred oneOf type
         public string|int $height,
@@ -53,6 +52,17 @@ class Person
         public ?Person $father = null,
     ) {
     }
+
+    public function jsonSerialize(): mixed
+    {
+        return [
+            'id' => $this->id,
+            'names' => $this->names,
+            'age' => $this->age,
+            'sex' => $this->sex->value,
+            'height' => $this->height,
+        ] + ($this->father !== null ?  ['father' => $this->father->jsonSerialize()] : []);
+    }
 }
 
 enum Power: string
@@ -64,13 +74,13 @@ enum Power: string
 
 // Infer $allOf Person
 #[ObjectSchema]
-class Hero extends Person
+class Hero extends Person implements JsonSerializable
 {
     public function __construct(
         string $id,
         array $names,
         int $age,
-        string $sex,
+        Sex $sex,
         string|int $height,
 
         // Inferred string property
@@ -82,6 +92,15 @@ class Hero extends Person
         ?Person $father = null,
     ) {
         parent::__construct($id, $names, $age, $sex, $height, 'ignore me', $father);
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return parent::jsonSerialize()
+            + [
+                'superName' => $this->superName,
+                'power' => $this->power,
+            ];
     }
 }
 
@@ -172,14 +191,14 @@ final class GenerateJsonSchemaTest extends TestCase
         );
     }
 
-    public function testBasicValidation(): void
+    private function testBasicValidation(): void
     {
         try {
             $thor = new Hero(
                 id: 'f554a7c7-5c33-415f-a0ca-db19be81f868',
                 names: ['Bruce Banner'],
                 age: 30,
-                sex: Sex::Male->value,
+                sex: Sex::Male,
                 height: 174,
                 superName: 'Thor',
                 power: Power::Strong->value,
@@ -189,18 +208,19 @@ final class GenerateJsonSchemaTest extends TestCase
 
             $this->assertTrue(true);
         } catch (InvalidSchemaValueException $e) {
+            fwrite(STDERR, $e->getMessage());
             $this->assertTrue(false);
         }
     }
 
-    public function testBasicValidationError(): void
+    private function testBasicValidationError(): void
     {
         try {
             $thor = new Hero(
                 id: 'dumpid',
                 names: ['Bruce Banner'],
                 age: 30,
-                sex: Sex::Male->value,
+                sex: Sex::Male,
                 height: '174',
                 superName: 'Thor',
                 power: Power::Strong->value,

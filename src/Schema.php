@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Giann\Schematics;
 
 use Attribute;
+use BackedEnum;
 use Giann\Schematics\Property\Property;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use JsonSerializable;
@@ -406,7 +407,7 @@ class Schema implements JsonSerializable
     public static function inferType(
         Schema $current,
         Schema $root,
-        ReflectionClass $classReflection,
+        ReflectionClass $currentClassReflection,
         ReflectionType $typeReflection
     ): Schema {
         if ($typeReflection instanceof ReflectionNamedType) {
@@ -427,6 +428,7 @@ class Schema implements JsonSerializable
                     $propertySchema = new BooleanSchema();
                     break;
                 case 'object':
+                case 'stdClass':
                     $propertySchema = new ObjectSchema();
                     break;
                 case 'mixed':
@@ -434,11 +436,38 @@ class Schema implements JsonSerializable
                     break;
                 default:
                     // Is it a circular reference to root schema ?
-                    if ($typeReflection->getName() === $classReflection->getName()) {
+                    if ($typeReflection->getName() === $currentClassReflection->getName()) {
                         $type = $root == $current ? '#' : $typeReflection->getName();
                         $propertySchema = (new Schema(ref: $type))->resolveRef($root);
-                    } elseif (class_exists($typeReflection->getName())) { // Is it a class?
-                        $propertySchema = (new Schema(ref: $typeReflection->getName()))->resolveRef($root);
+                    } elseif (class_exists($typeReflection->getName())) { // Is it a class or enum?
+                        $classReflection = new ReflectionClass($typeReflection->getName());
+
+                        if ($classReflection->implementsInterface(BackedEnum::class)) {
+                            // Backed enum
+                            $enumReflection = new ReflectionEnum($typeReflection->getName());
+                            $backingType = $enumReflection->getBackingType();
+
+                            $propertySchema = $backingType !== null
+                                ? static::inferType(
+                                      $current,
+                                      $root,
+                                      $currentClassReflection,
+                                      $enumReflection->getBackingType()
+                                  )
+                                : new StringSchema();
+
+                            $propertySchema->enum = static::classToEnum($typeReflection->getName());
+                        } elseif ($classReflection->implementsInterface(UnitEnum::class)) {
+                            // Normal enum
+                            $propertySchema = new StringSchema(
+                                enumClass: $typeReflection->getName()
+                            );
+                        } elseif (static::hasSchema($typeReflection->getName())) {
+                            // Class
+                            $propertySchema = (new Schema(ref: $typeReflection->getName()))->resolveRef($root);
+                        } else {
+                            throw new InvalidSchemaException('Could not infer json schema type of type ' . $typeReflection->getName());
+                        }
                     } else {
                         throw new InvalidSchemaException('Could not infer json schema type of type ' . $typeReflection->getName());
                     }
@@ -459,7 +488,7 @@ class Schema implements JsonSerializable
         if ($typeReflection instanceof ReflectionUnionType) {
             $oneOf = [];
             foreach ($typeReflection->getTypes() as $subTypeReflection) {
-                $oneOf[] = static::inferType($current, $root, $classReflection, $subTypeReflection);
+                $oneOf[] = static::inferType($current, $root, $currentClassReflection, $subTypeReflection);
             }
 
             return new Schema(
@@ -470,7 +499,7 @@ class Schema implements JsonSerializable
         if ($typeReflection instanceof ReflectionIntersectionType) {
             $allOf = [];
             foreach ($typeReflection->getTypes() as $subTypeReflection) {
-                $allOf[] = static::inferType($current, $root, $classReflection, $subTypeReflection);
+                $allOf[] = static::inferType($current, $root, $currentClassReflection, $subTypeReflection);
             }
 
             return new Schema(
