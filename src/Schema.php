@@ -209,12 +209,14 @@ class Schema implements JsonSerializable
 
         $classReflection = new ReflectionClass($class);
 
-        $schemaAttributes = array_filter(
-            array_map(
-                fn ($attribute) => $attribute->newInstance(),
-                $classReflection->getAttributes()
-            ),
-            fn ($attribute) => $attribute instanceof ObjectSchema,
+        $schemaAttributes = array_values(
+            array_filter(
+                array_map(
+                    fn ($attribute) => $attribute->newInstance(),
+                    $classReflection->getAttributes()
+                ),
+                fn ($attribute) => $attribute instanceof ObjectSchema,
+            )
         );
 
         if (empty($schemaAttributes)) {
@@ -248,9 +250,11 @@ class Schema implements JsonSerializable
             $classReflection->getAttributes()
         );
 
-        $schemaAttributes = array_filter(
-            $attributes,
-            fn ($attribute) => $attribute instanceof ObjectSchema,
+        $schemaAttributes = array_values(
+            array_filter(
+                $attributes,
+                fn ($attribute) => $attribute instanceof ObjectSchema,
+            )
         );
 
         if (empty($schemaAttributes)) {
@@ -269,9 +273,11 @@ class Schema implements JsonSerializable
 
         // Attribute annotations
         /** @var Property[] */
-        $schemaProperties = array_filter(
-            $attributes,
-            fn ($attribute) => $attribute instanceof Property,
+        $schemaProperties = array_values(
+            array_filter(
+                $attributes,
+                fn ($attribute) => $attribute instanceof Property,
+            )
         );
 
         foreach ($schemaProperties as $property) {
@@ -329,26 +335,38 @@ class Schema implements JsonSerializable
                 )
             ) == 0;
 
-            $propertySchemaProperties = array_filter(
-                $propertyAttributes,
-                fn ($attr) => $attr instanceof Property
+            $names = array_values(
+                array_filter(
+                    $propertyAttributes,
+                    fn ($attr) => $attr instanceof Renamed
+                )
+            );
+            $name = !empty($names) ? $names[0]->name : $property->getName();
+
+            $propertySchemaProperties = array_values(
+                array_filter(
+                    $propertyAttributes,
+                    fn ($attr) => $attr instanceof Property
+                )
             );
 
-            $propertySchemas = array_filter(
-                $propertyAttributes,
-                fn ($attr) => $attr instanceof Schema
+            $propertySchemas = array_values(
+                array_filter(
+                    $propertyAttributes,
+                    fn ($attr) => $attr instanceof Schema
+                )
             );
 
             if (count($propertySchemas) > 1) {
-                throw new InvalidSchemaException('The property ' . $class . '::' . $property->getName() . ' has multiple schema attributes');
+                throw new InvalidSchemaException('The property ' . $class . '::' . $name . ' has multiple schema attributes');
             }
 
             $propertySchema = empty($propertySchemas) ? null : $propertySchemas[0];
 
             if ($propertySchema !== null) {
-                $schema->properties[$property->getName()] = $propertySchema->resolveRef($root);
+                $schema->properties[$name] = $propertySchema->resolveRef($root);
                 if ($isRequired) {
-                    $required[] = $property->getName();
+                    $required[] = $name;
                 }
             } else {
                 $type = $property->getType();
@@ -362,9 +380,9 @@ class Schema implements JsonSerializable
                     : new Schema();
 
                 // Not annotated, try to infer something
-                $schema->properties[$property->getName()] = $propertySchema;
+                $schema->properties[$name] = $propertySchema;
                 if ($isRequired) {
-                    $required[] = $property->getName();
+                    $required[] = $name;
                 }
             }
 
