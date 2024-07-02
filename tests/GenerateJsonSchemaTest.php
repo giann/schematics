@@ -22,7 +22,7 @@ enum Sex: string
     case Other = 'other';
 }
 
-#[ObjectSchema()]
+#[ObjectSchema]
 class Person
 {
     public function __construct(
@@ -63,7 +63,7 @@ enum Power: string
 }
 
 // Infer $allOf Person
-#[ObjectSchema()]
+#[ObjectSchema]
 class Hero extends Person
 {
     public function __construct(
