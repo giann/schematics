@@ -117,7 +117,14 @@ class Schema implements JsonSerializable
                 if (!isset($root->defs[$ref])) {
                     $root->defs[$ref] = new CircularReference(); // Avoid circular ref resolving
                     $schema = self::classSchema($ref, $root);
-                    $root->defs[$ref] = $schema instanceof Schema ? $schema->resolveRef($root) : $schema;
+
+                    if ($schema !== null && $schema instanceof Schema) {
+                        $root->defs[$ref] = $schema;
+                    } else {
+                        // We did not resolve it, it's up to the user to have a resolver
+                        unset($root->defs[$ref]);
+                        $this->resolvedRef = $ref; // No need to investigate further
+                    }
                 }
             }
         }
