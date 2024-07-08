@@ -41,11 +41,11 @@ class Person implements JsonSerializable
 
         public Sex $sex,
 
-        // Inferred oneOf type
-        public string|int $height,
-
         #[ExcludedFromSchema]
         public string $ignoreMe,
+
+        // Inferred oneOf type
+        public string|int $height = 180,
 
         // Inferred $ref to self
         #[NotRequired]
@@ -91,7 +91,7 @@ class Hero extends Person implements JsonSerializable
 
         ?Person $father = null,
     ) {
-        parent::__construct($id, $names, $age, $sex, $height, 'ignore me', $father);
+        parent::__construct($id, $names, $age, $sex, 'ignore me', $height, $father);
     }
 
     public function jsonSerialize(): mixed
@@ -168,6 +168,7 @@ final class GenerateJsonSchemaTest extends TestCase
                                 ]
                             ],
                             'height' => [
+                                'default' => 180,
                                 'oneOf' => [
                                     [
                                         'type' => 'string'

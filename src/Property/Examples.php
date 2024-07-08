@@ -14,6 +14,6 @@ final class Examples extends Property
      */
     public function __construct(array $examples)
     {
-        parent::__construct("examples", $examples);
+        parent::__construct('examples', $examples);
     }
 }

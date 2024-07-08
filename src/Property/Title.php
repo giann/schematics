@@ -11,6 +11,6 @@ final class Title extends Property
 {
     public function __construct(string $title)
     {
-        parent::__construct("title", $title);
+        parent::__construct('title', $title);
     }
 }

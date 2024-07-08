@@ -44,7 +44,7 @@ class NumberSchema extends Schema
         array $defs = [],
         ?string $description = null,
         ?array $examples = null,
-        $default = null,
+        $default = new NullConst(),
         ?bool $deprecated = null,
         ?bool $readOnly = null,
         ?bool $writeOnly = null,

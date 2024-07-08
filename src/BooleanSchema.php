@@ -37,7 +37,7 @@ class BooleanSchema extends Schema
         ?string $ref = null,
         array $defs = [],
         ?string $description = null,
-        $default = null,
+        $default = new NullConst(),
         ?bool $deprecated = null,
         ?bool $readOnly = null,
         ?bool $writeOnly = null,

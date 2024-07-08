@@ -11,6 +11,6 @@ final class Anchor extends Property
 {
     public function __construct(string $anchor)
     {
-        parent::__construct("$anchor", $anchor);
+        parent::__construct('$anchor', $anchor);
     }
 }

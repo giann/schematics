@@ -16,6 +16,7 @@ use ReflectionEnumBackedCase;
 use ReflectionNamedType;
 use ReflectionException;
 use ReflectionIntersectionType;
+use ReflectionProperty;
 use ReflectionType;
 use ReflectionUnionType;
 use UnitEnum;
@@ -69,7 +70,7 @@ class Schema implements JsonSerializable
         public ?string $title = null,
         public ?string $description = null,
         public ?array $examples = null,
-        public mixed $default = null,
+        public mixed $default = new NullConst(),
         public ?bool $deprecated = null,
         public ?bool $readOnly = null,
         public ?bool $writeOnly = null,
@@ -288,8 +289,8 @@ class Schema implements JsonSerializable
             )
         );
 
-        foreach ($schemaProperties as $property) {
-            $schema->{$property->key} = $property->value;
+        foreach ($schemaProperties as $schemaProperty) {
+            $schema->{$schemaProperty->key} = $schemaProperty->value;
         }
 
         $root = $root ?? $schema;
@@ -312,7 +313,7 @@ class Schema implements JsonSerializable
 
         $properties = $classReflection->getProperties();
         $required = [];
-        foreach ($properties as $property) {
+        foreach ($properties as $property) {          
             // Ignore properties coming from parent class
             if (
                 $property->getDeclaringClass()->getNamespaceName() . '\\' . $property->getDeclaringClass()->getName()
@@ -358,6 +359,7 @@ class Schema implements JsonSerializable
                 )
             );
 
+            /** @var Schema[] */
             $propertySchemas = array_values(
                 array_filter(
                     $propertyAttributes,
@@ -394,14 +396,63 @@ class Schema implements JsonSerializable
                 }
             }
 
+            assert($propertySchema !== null);
+
             foreach ($propertySchemaProperties as $attribute) {
                 $propertySchema->{$attribute->key} = $attribute->value;
             }
+
+            $propertySchema->default = self::getPropertyDefaultValue($classReflection, $property);
         }
 
         $schema->required = !empty($required) ? $required : null;
 
         return $schema;
+    }
+
+    /**
+     * If the property was define as __construct param, ReflectionProperty->hasDefaultValue() will return false
+     * We have to either get the default value from ReflectionProperty->getDefaultValue() or by looking up the __construct param
+     */
+    private static function getPropertyDefaultValue(ReflectionClass $classReflection, ReflectionProperty $propertyReflection): mixed
+    {
+        if ($propertyReflection->hasDefaultValue()) {
+            return json_encode($propertyReflection->getDefaultValue());
+        }
+
+        if ($propertyReflection->isPromoted()) {
+            $isRequired = count(
+                $propertyReflection->getAttributes(NotRequired::class) ?? []
+            ) == 0;
+            
+            foreach ($classReflection->getConstructor()?->getParameters() ?? [] as $param) {
+                if ($param->getName() === $propertyReflection->getName() && $param->isPromoted()) {
+                    if ($param->isDefaultValueAvailable()) {
+                        $default = $param->getDefaultValue();
+
+						// If property has `NotRequired` attribute, a null default is not considered as the default value
+						if ($default === null && !$isRequired) {
+							return new NullConst();
+						} else {
+							return json_decode(json_encode($default));
+						}
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // The property may be promoted in a parent class
+        if (($parentClass = $classReflection->getParentClass())) {
+            foreach ($parentClass->getProperties() as $parentProperty) {
+                if ($parentProperty->getName() === $propertyReflection->getName()) {
+                    return self::getPropertyDefaultValue($parentClass, $parentProperty);
+                }
+            }
+        }
+
+        return new NullConst();
     }
 
     /**
@@ -534,7 +585,7 @@ class Schema implements JsonSerializable
             ] : [])
             + ($this->title !== null ? ['title' => $this->title] : [])
             + ($this->description !== null ? ['description' => $this->description] : [])
-            + ($this->default !== null ? ['default' => $this->default] : [])
+            + (!($this->default instanceof NullConst) ? ['default' => $this->default] : [])
             + ($this->deprecated !== null ? ['deprecated' => $this->deprecated] : [])
             + ($this->readOnly !== null ? ['readOnly' => $this->readOnly] : [])
             + ($this->writeOnly !== null ? ['writeOnly' => $this->writeOnly] : [])

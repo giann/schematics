@@ -7,10 +7,11 @@ namespace Giann\Schematics\Property;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]
-final class Ref extends Property
+final class DefaultValue extends Property
 {
-    public function __construct(string $ref)
+    public function __construct(mixed $default)
     {
-        parent::__construct('$ref', $ref);
+        parent::__construct('default', $default);
     }
 }
+

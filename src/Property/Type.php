@@ -14,6 +14,6 @@ final class Type extends Property
      */
     public function __construct(array $type)
     {
-        parent::__construct("type", $type);
+        parent::__construct('type', $type);
     }
 }
