@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Giann\Schematics\ArraySchema;
+use Giann\Schematics\BooleanSchema;
 use Giann\Schematics\Exception\InvalidSchemaValueException;
 use Giann\Schematics\ExcludedFromSchema;
 use Giann\Schematics\Format;
@@ -105,6 +106,11 @@ class Hero extends Person implements JsonSerializable
         return 12;
     }
 
+    #[BooleanSchema]
+    public function isOk(): bool {
+        return true;
+    }
+
     // Overriden getter should be ignored
     public function getInheritedComputedProperty(): int
     {
@@ -120,6 +126,7 @@ class Hero extends Person implements JsonSerializable
                 'superName' => $this->superName,
                 'power' => $this->power,
                 'computed' => $this->getComputed(),
+                'ok' => $this->isOk(),
             ];
     }
 }
@@ -146,6 +153,9 @@ final class GenerateJsonSchemaTest extends TestCase
                     'computed' => [
                         'type' => 'integer'
                     ],
+                    'ok' => [
+                        'type' => 'boolean'
+                    ]
                 ],
                 'allOf' => [
                     [
@@ -211,7 +221,7 @@ final class GenerateJsonSchemaTest extends TestCase
                     ]
                 ],
                 'required' => [
-                    'superName', 'power', 'computed',
+                    'superName', 'power', 'computed', 'ok',
                 ],
             ],
             Schema::classSchema(Hero::class)->jsonSerialize()

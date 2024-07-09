@@ -328,7 +328,7 @@ class Schema implements JsonSerializable
             $isGetter = $isMethod
                 && ($returnType = $member->getReturnType())
                 // Starts with 'get'
-                && str_starts_with($member->getName(), 'get')
+                && (str_starts_with($member->getName(), 'get') || str_starts_with($member->getName(), 'is'))
                 // As no parameters
                 && $member->getNumberOfParameters() === 0
                 // Does not return void
@@ -378,7 +378,10 @@ class Schema implements JsonSerializable
                 )
             );
             // If getter drop the `get`
-            $name = $isGetter ? lcfirst(substr($member->getName(), 3)) : $member->getName();
+            $name = $member->getName();
+            $name = $isGetter
+                ? lcfirst(substr($name, str_starts_with($name, 'get') ? 3 : 2))
+                : $name;
             // If renamed, replace the name
             $name = !empty($names) ? $names[0]->name : $name;
 
@@ -407,6 +410,11 @@ class Schema implements JsonSerializable
             }
 
             $propertySchema = empty($propertySchemas) ? null : $propertySchemas[0];
+
+            // With `Renamed` and getters we might have multiple properties with the same name in the schema
+            if (isset($schema->properties[$name])) {
+                throw new InvalidSchemaException('The property ' . $class . '::' . $name . ' is already defined');
+            }
 
             if ($propertySchema !== null) {
                 $schema->properties[$name] = $propertySchema->resolveRef($root);
