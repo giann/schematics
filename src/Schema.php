@@ -16,6 +16,7 @@ use ReflectionEnumBackedCase;
 use ReflectionNamedType;
 use ReflectionException;
 use ReflectionIntersectionType;
+use ReflectionMethod;
 use ReflectionProperty;
 use ReflectionType;
 use ReflectionUnionType;
@@ -30,7 +31,7 @@ final class CircularReference
 {
 }
 
-#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]
+#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD)]
 class Schema implements JsonSerializable
 {
     // To avoid resolving the ref multiple times
@@ -311,26 +312,52 @@ class Schema implements JsonSerializable
             $schema->allOf = ($schema->allOf ?? []) + [$ref];
         }
 
-        $properties = $classReflection->getProperties();
         $required = [];
-        foreach ($properties as $property) {          
-            // Ignore properties coming from parent class
+        /** @var ReflectionMethod|ReflectionProperty $member */
+        foreach (array_merge($classReflection->getProperties(), $classReflection->getMethods()) as $member) {          
+            // Ignore properties/methods coming from parent class
             if (
-                $property->getDeclaringClass()->getNamespaceName() . '\\' . $property->getDeclaringClass()->getName()
+                $member->getDeclaringClass()->getNamespaceName() . '\\' . $member->getDeclaringClass()->getName()
                 !== $classReflection->getNamespaceName() . '\\' . $classReflection->getName()
             ) {
                 continue;
             }
 
-            $propertyAttributes = array_map(
+            // If its a method, it must be a getter
+            $isMethod = $member instanceof ReflectionMethod;
+            $isGetter = $isMethod
+                && ($returnType = $member->getReturnType())
+                // Starts with 'get'
+                && str_starts_with($member->getName(), 'get')
+                // As no parameters
+                && $member->getNumberOfParameters() === 0
+                // Does not return void
+                && (
+                    !($returnType instanceof ReflectionNamedType)
+                    || !$returnType->isBuiltin()
+                    || $returnType->getName() !== 'void'
+                )
+                // Does not override parent method
+                && (
+                    $parentReflection === false
+                    || !$parentReflection->hasMethod($member->getName())
+                )
+                // Current class implements JsonSerializable
+                && $classReflection->implementsInterface(JsonSerializable::class);
+
+            if ($isMethod && !$isGetter) {
+                continue;
+            }
+
+            $memberAttributes = array_map(
                 fn ($attr) => $attr->newInstance(),
-                $property->getAttributes()
+                $member->getAttributes()
             );
 
             // Property excluded from json schema ?
             if (count(
                 array_filter(
-                    $propertyAttributes,
+                    $memberAttributes,
                     fn ($attr) => $attr instanceof ExcludedFromSchema
                 )
             ) > 0) {
@@ -339,22 +366,25 @@ class Schema implements JsonSerializable
 
             $isRequired = count(
                 array_filter(
-                    $propertyAttributes,
+                    $memberAttributes,
                     fn ($attr) => $attr instanceof NotRequired
                 )
             ) == 0;
 
             $names = array_values(
                 array_filter(
-                    $propertyAttributes,
+                    $memberAttributes,
                     fn ($attr) => $attr instanceof Renamed
                 )
             );
-            $name = !empty($names) ? $names[0]->name : $property->getName();
+            // If getter drop the `get`
+            $name = $isGetter ? lcfirst(substr($member->getName(), 3)) : $member->getName();
+            // If renamed, replace the name
+            $name = !empty($names) ? $names[0]->name : $name;
 
             $propertySchemaProperties = array_values(
                 array_filter(
-                    $propertyAttributes,
+                    $memberAttributes,
                     fn ($attr) => $attr instanceof Property
                 )
             );
@@ -362,10 +392,15 @@ class Schema implements JsonSerializable
             /** @var Schema[] */
             $propertySchemas = array_values(
                 array_filter(
-                    $propertyAttributes,
+                    $memberAttributes,
                     fn ($attr) => $attr instanceof Schema
                 )
             );
+
+            // A getter must have a Schema attribute to be considered as a property of the schema
+            if ($isGetter && count($propertySchemas) === 0) {
+                continue;
+            }
 
             if (count($propertySchemas) > 1) {
                 throw new InvalidSchemaException('The property ' . $class . '::' . $name . ' has multiple schema attributes');
@@ -379,7 +414,9 @@ class Schema implements JsonSerializable
                     $required[] = $name;
                 }
             } else {
-                $type = $property->getType();
+                // We can't get here with a getter
+                assert(!($member instanceof ReflectionMethod));
+                $type = $member->getType();
                 $propertySchema = $type !== null
                     ? static::inferType(
                         $schema,
@@ -402,7 +439,9 @@ class Schema implements JsonSerializable
                 $propertySchema->{$attribute->key} = $attribute->value;
             }
 
-            $propertySchema->default = self::getPropertyDefaultValue($classReflection, $property);
+            if (!$isGetter) {
+                $propertySchema->default = self::getPropertyDefaultValue($classReflection, $member);
+            }
         }
 
         $schema->required = !empty($required) ? $required : null;

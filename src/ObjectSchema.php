@@ -7,7 +7,7 @@ namespace Giann\Schematics;
 use Attribute;
 use UnitEnum;
 
-#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]
+#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD)]
 class ObjectSchema extends Schema
 {
     /**

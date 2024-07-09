@@ -53,6 +53,11 @@ class Person implements JsonSerializable
     ) {
     }
 
+    #[IntegerSchema]
+    public function getInheritedComputedProperty(): int {
+        return 12;
+    }
+
     public function jsonSerialize(): mixed
     {
         return [
@@ -61,6 +66,7 @@ class Person implements JsonSerializable
             'age' => $this->age,
             'sex' => $this->sex->value,
             'height' => $this->height,
+            'inheritedComputedProperty' => $this->getInheritedComputedProperty(),
         ] + ($this->father !== null ?  ['father' => $this->father->jsonSerialize()] : []);
     }
 }
@@ -94,12 +100,26 @@ class Hero extends Person implements JsonSerializable
         parent::__construct($id, $names, $age, $sex, 'ignore me', $height, $father);
     }
 
+    #[IntegerSchema]
+    public function getComputed(): int {
+        return 12;
+    }
+
+    // Overriden getter should be ignored
+    public function getInheritedComputedProperty(): int
+    {
+    	return 13;
+    }
+
+    public function getNotAProperty(): void {}
+
     public function jsonSerialize(): mixed
     {
         return parent::jsonSerialize()
             + [
                 'superName' => $this->superName,
                 'power' => $this->power,
+                'computed' => $this->getComputed(),
             ];
     }
 }
@@ -122,6 +142,9 @@ final class GenerateJsonSchemaTest extends TestCase
                             'smash!',
                             'hummmm!',
                         ]
+                    ],
+                    'computed' => [
+                        'type' => 'integer'
                     ],
                 ],
                 'allOf' => [
@@ -177,15 +200,18 @@ final class GenerateJsonSchemaTest extends TestCase
                                         'type' => 'integer'
                                     ]
                                 ]
-                            ]
+                            ],
+                            'inheritedComputedProperty' => [
+                                'type' => 'integer'
+                            ],
                         ],
                         'required' => [
-                            'id', 'names', 'age', 'sex', 'height'
+                            'id', 'names', 'age', 'sex', 'height', 'inheritedComputedProperty',
                         ]
                     ]
                 ],
                 'required' => [
-                    'superName', 'power',
+                    'superName', 'power', 'computed',
                 ],
             ],
             Schema::classSchema(Hero::class)->jsonSerialize()

@@ -6,7 +6,7 @@ namespace Giann\Schematics\Property;
 
 use Attribute;
 
-#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY)]
+#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD)]
 final class Ref extends Property
 {
     public function __construct(string $ref)

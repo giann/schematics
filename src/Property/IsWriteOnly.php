@@ -6,7 +6,7 @@ namespace Giann\Schematics\Property;
 
 use Attribute;
 
-#[Attribute(Attribute::TARGET_PROPERTY)]
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD | Attribute::TARGET_CLASS)]
 final class IsWriteOnly extends Property
 {
     public function __construct(bool $value = true)
