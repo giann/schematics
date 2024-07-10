@@ -328,7 +328,7 @@ class Schema implements JsonSerializable
             $isGetter = $isMethod
                 && ($returnType = $member->getReturnType())
                 // Starts with 'get'
-                && (str_starts_with($member->getName(), 'get') || str_starts_with($member->getName(), 'is'))
+                && (str_starts_with($member->getName(), 'get') || str_starts_with($member->getName(), 'is') || str_starts_with($member->getName(), 'has'))
                 // As no parameters
                 && $member->getNumberOfParameters() === 0
                 // Does not return void
@@ -380,7 +380,7 @@ class Schema implements JsonSerializable
             // If getter drop the `get`
             $name = $member->getName();
             $name = $isGetter
-                ? lcfirst(substr($name, str_starts_with($name, 'get') ? 3 : 2))
+                ? lcfirst(substr($name, str_starts_with($name, 'is') ? 2 : 3))
                 : $name;
             // If renamed, replace the name
             $name = !empty($names) ? $names[0]->name : $name;
