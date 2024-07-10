@@ -6,7 +6,7 @@ namespace Giann\Schematics;
 
 use Attribute;
 
-#[Attribute(Attribute::TARGET_PROPERTY) | Attribute::TARGET_METHOD]
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD)]
 class RefSchema extends Schema
 {
     public function __construct(

@@ -314,7 +314,7 @@ class Schema implements JsonSerializable
 
         $required = [];
         /** @var ReflectionMethod|ReflectionProperty $member */
-        foreach (array_merge($classReflection->getProperties(), $classReflection->getMethods()) as $member) {          
+        foreach (array_merge($classReflection->getProperties(), $classReflection->getMethods()) as $member) {
             // Ignore properties/methods coming from parent class
             if (
                 $member->getDeclaringClass()->getNamespaceName() . '\\' . $member->getDeclaringClass()->getName()
@@ -448,6 +448,7 @@ class Schema implements JsonSerializable
             }
 
             if (!$isGetter) {
+                assert($member instanceof ReflectionProperty);
                 $propertySchema->default = self::getPropertyDefaultValue($classReflection, $member);
             }
         }
@@ -460,6 +461,10 @@ class Schema implements JsonSerializable
     /**
      * If the property was define as __construct param, ReflectionProperty->hasDefaultValue() will return false
      * We have to either get the default value from ReflectionProperty->getDefaultValue() or by looking up the __construct param
+     * 
+     * @param ReflectionClass<object> $classReflection
+     * @param ReflectionProperty $propertyReflection
+     * @return mixed
      */
     private static function getPropertyDefaultValue(ReflectionClass $classReflection, ReflectionProperty $propertyReflection): mixed
     {
@@ -469,20 +474,20 @@ class Schema implements JsonSerializable
 
         if ($propertyReflection->isPromoted()) {
             $isRequired = count(
-                $propertyReflection->getAttributes(NotRequired::class) ?? []
+                $propertyReflection->getAttributes(NotRequired::class)
             ) == 0;
-            
+
             foreach ($classReflection->getConstructor()?->getParameters() ?? [] as $param) {
                 if ($param->getName() === $propertyReflection->getName() && $param->isPromoted()) {
                     if ($param->isDefaultValueAvailable()) {
                         $default = $param->getDefaultValue();
 
-						// If property has `NotRequired` attribute, a null default is not considered as the default value
-						if ($default === null && !$isRequired) {
-							return new NullConst();
-						} else {
-							return json_decode(json_encode($default));
-						}
+                        // If property has `NotRequired` attribute, a null default is not considered as the default value
+                        if ($default === null && !$isRequired) {
+                            return new NullConst();
+                        } else {
+                            return json_decode(json_encode($default) ?: '');
+                        }
                     } else {
                         break;
                     }
@@ -505,7 +510,7 @@ class Schema implements JsonSerializable
     /**
      * @param Schema $current
      * @param Schema $root
-     * @param ReflectionClass<object> $classReflection
+     * @param ReflectionClass<object> $currentClassReflection
      * @param ReflectionType $typeReflection
      * @return Schema
      */
@@ -549,23 +554,28 @@ class Schema implements JsonSerializable
 
                         if ($classReflection->implementsInterface(BackedEnum::class)) {
                             // Backed enum
-                            $enumReflection = new ReflectionEnum($typeReflection->getName());
+                            /** @var class-string<UnitEnum> */
+                            $enumName = $typeReflection->getName();
+                            $enumReflection = new ReflectionEnum($enumName);
                             $backingType = $enumReflection->getBackingType();
 
                             $propertySchema = $backingType !== null
                                 ? static::inferType(
-                                      $current,
-                                      $root,
-                                      $currentClassReflection,
-                                      $enumReflection->getBackingType()
-                                  )
+                                    $current,
+                                    $root,
+                                    $currentClassReflection,
+                                    $backingType
+                                )
                                 : new StringSchema();
 
-                            $propertySchema->enum = static::classToEnum($typeReflection->getName());
+                            $propertySchema->enum = self::classToEnum($enumName);
                         } elseif ($classReflection->implementsInterface(UnitEnum::class)) {
+                            /** @var class-string<UnitEnum> */
+                            $enumName = $typeReflection->getName();
+
                             // Normal enum
                             $propertySchema = new StringSchema(
-                                enumClass: $typeReflection->getName()
+                                enumClass: $enumName
                             );
                         } elseif (static::hasSchema($typeReflection->getName())) {
                             // Class
