@@ -528,7 +528,7 @@ class Schema implements JsonSerializable
                 case 'int':
                     $propertySchema = new IntegerSchema();
                     break;
-                case 'double':
+                case 'float':
                     $propertySchema = new NumberSchema();
                     break;
                 case 'array':
