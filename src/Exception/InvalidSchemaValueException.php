@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Giann\Schematics\Exception;
 
-use Exception;
 use Throwable;
 
-class InvalidSchemaValueException extends Exception
+class InvalidSchemaValueException extends InvalidSchemaException
 {
     /**
      * @param string $message

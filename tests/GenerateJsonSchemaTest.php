@@ -8,6 +8,7 @@ use Giann\Schematics\BooleanSchema;
 use Giann\Schematics\Exception\InvalidSchemaValueException;
 use Giann\Schematics\ExcludedFromSchema;
 use Giann\Schematics\Format;
+use Giann\Schematics\Generator;
 use Giann\Schematics\IntegerSchema;
 use Giann\Schematics\NotRequired;
 use Giann\Schematics\ObjectSchema;
@@ -55,7 +56,8 @@ class Person implements JsonSerializable
     }
 
     #[IntegerSchema]
-    public function getInheritedComputedProperty(): int {
+    public function getInheritedComputedProperty(): int
+    {
         return 12;
     }
 
@@ -102,22 +104,26 @@ class Hero extends Person implements JsonSerializable
     }
 
     #[IntegerSchema]
-    public function getComputed(): int {
+    public function getComputed(): int
+    {
         return 12;
     }
 
     #[BooleanSchema]
-    public function isOk(): bool {
+    public function isOk(): bool
+    {
         return true;
     }
 
     // Overriden getter should be ignored
     public function getInheritedComputedProperty(): int
     {
-    	return 13;
+        return 13;
     }
 
-    public function getNotAProperty(): void {}
+    public function getNotAProperty(): void
+    {
+    }
 
     public function jsonSerialize(): mixed
     {
@@ -226,6 +232,12 @@ final class GenerateJsonSchemaTest extends TestCase
             ],
             Schema::classSchema(Hero::class)->jsonSerialize()
         );
+
+        // Generate annotation from json schema
+        $reconstructed = eval('return ' . (string)(new Generator())->generateSchema(Schema::classSchema(Hero::class)->jsonSerialize()) . ';');
+
+        $this->assertInstanceOf(Schema::class, $reconstructed);
+        $this->assertEquals(Schema::classSchema(Hero::class)->jsonSerialize(), $reconstructed->jsonSerialize());
     }
 
     private function testBasicValidation(): void
