@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
+use PhpParser\PrettyPrinter;
 use Giann\Schematics\ArraySchema;
 use Giann\Schematics\BooleanSchema;
 use Giann\Schematics\Exception\InvalidSchemaValueException;
@@ -233,8 +234,9 @@ final class GenerateJsonSchemaTest extends TestCase
             Schema::classSchema(Hero::class)->jsonSerialize()
         );
 
-        // Generate annotation from json schema
-        $reconstructed = eval('return ' . (string)(new Generator())->generateSchema(Schema::classSchema(Hero::class)->jsonSerialize()) . ';');
+        // Generate annotation expression AST from json schema
+        $ast = (new Generator)->generateSchema(Schema::classSchema(Hero::class)->jsonSerialize());
+        $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
 
         $this->assertInstanceOf(Schema::class, $reconstructed);
         $this->assertEquals(Schema::classSchema(Hero::class)->jsonSerialize(), $reconstructed->jsonSerialize());

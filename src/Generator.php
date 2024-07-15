@@ -7,22 +7,76 @@ namespace Giann\Schematics;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\Exception\InvalidSchemaKeywordValueException;
 use Giann\Trunk\Trunk;
-use Nette\PhpGenerator\Literal;
+use PhpParser\Node\Arg;
+use PhpParser\Node\ArrayItem;
+use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\ConstFetch;
+use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
+use PhpParser\Node\Name\FullyQualified;
+use PhpParser\Node\Scalar\Float_;
+use PhpParser\Node\Scalar\Int_;
+use PhpParser\Node\Scalar\String_;
+use PhpParser\Node\Stmt\Expression;
+use PhpParser\Parser;
+use PhpParser\ParserFactory;
 
 class Generator
 {
+    private Parser $parser;
+
+    public function __construct()
+    {
+        $this->parser = (new ParserFactory)->createForNewestSupportedVersion();
+    }
+
+    private static function trueExpr(): Expr
+    {
+        return new ConstFetch(new Name('true'));
+    }
+
+    private static function falseExpr(): Expr
+    {
+        return new ConstFetch(new Name('false'));
+    }
+
+    /**
+     * @param mixed $value
+     * @throws InvalidSchemaException
+     * @return Expr
+     */
+    private function phpValueToExpr(mixed $value): Expr
+    {
+        $parsed = $this->parser->parse(
+            '<?php '
+                . var_export($value, true)
+                . ';'
+        ) ?? [];
+
+        if (count($parsed) == 1 && $parsed[0] instanceof Expression) {
+            /** @var Expression */
+            $exprStmt = $parsed[0];
+            return $exprStmt->expr;
+        }
+
+        throw new InvalidSchemaException();
+    }
+
     /**
      * Generate Schema expression from json schema
      * @param array<string, mixed>|Trunk $rawSchema
      * @throws InvalidSchemaException
-     * @return Literal
+     * @return Expr
      */
-    public function generateSchema(array|Trunk $rawSchema): Literal
+    public function generateSchema(array|Trunk $rawSchema): Expr
     {
         $rawSchema = $rawSchema instanceof Trunk ? $rawSchema : new Trunk($rawSchema);
 
         // List of parameters to give to the final `new XXXSchema(...)` expression
-        /** @var string[] */
+        /** @var Arg[] */
         $parameters = [];
 
         // Common properties
@@ -72,11 +126,11 @@ class Generator
             }
         }
 
-        return Literal::new($baseClass, $parameters);
+        return new New_(new FullyQualified($baseClass), $parameters);
     }
 
     /**
-     * @param array<string,mixed> $parameters
+     * @param Arg[] $parameters
      * @throws InvalidSchemaException
      * @return void
      */
@@ -106,9 +160,23 @@ class Generator
 
                     // No need to set the type if there's only one
                     if (count($types) > 1) {
-                        $parameters[$property] = array_map(
-                            fn (Trunk $type) => Type::from($type->stringValue()),
-                            $types
+                        // type: [Type::XXX, ...]
+                        $parameters[] = new Arg(
+                            name: new Identifier('type'),
+                            value: new Array_(
+                                array_map(
+                                    fn (Trunk $type) => new ArrayItem(
+                                        new StaticCall(
+                                            new FullyQualified(Type::class),
+                                            'from',
+                                            [
+                                                new Arg(new String_($type->stringValue()))
+                                            ]
+                                        )
+                                    ),
+                                    $types
+                                )
+                            )
                         );
                     }
 
@@ -124,7 +192,10 @@ class Generator
                         );
                     }
 
-                    $parameters[preg_replace('/\\$/', '', $property)] = $value->string();
+                    $parameters[] = new Arg(
+                        name: new Identifier(preg_replace('/\\$/', '', $property) ?? $property),
+                        value: new String_($value->stringValue()),
+                    );
 
                     break;
                 case '$defs':
@@ -136,10 +207,18 @@ class Generator
                         );
                     }
 
-                    $parameters['defs'] = [];
-                    foreach ($rawDefs as $name => $rawDefSchema) {
-                        $parameters['defs'][$name] = $this->generateSchema($rawDefSchema);
-                    }
+                    $parameters[] = new Arg(
+                        name: new Identifier('defs'),
+                        value: new Array_(
+                            array_map(
+                                fn ($key) => new ArrayItem(
+                                    key: new String_($key),
+                                    value: $this->generateSchema($rawDefs[$key])
+                                ),
+                                array_keys($rawDefs),
+                            ),
+                        ),
+                    );
 
                     break;
                 case 'examples':
@@ -150,12 +229,23 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $value->listRawValue();
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new Array_(
+                            array_map(
+                                fn ($value) => new ArrayItem($this->phpValueToExpr($value)),
+                                $value->listRawValue()
+                            )
+                        )
+                    );
 
                     break;
                 case 'default':
                 case 'const':
-                    $parameters[$property] = $value->data;
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $this->phpValueToExpr($value->data)
+                    );
                     break;
                 case 'deprecated':
                 case 'readOnly':
@@ -166,7 +256,10 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $value->boolValue();
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $value->boolValue() ? self::trueExpr() : self::falseExpr(),
+                    );
 
                     break;
                 case 'allOf':
@@ -180,11 +273,15 @@ class Generator
                         );
                     }
 
-                    $subSchemas = [];
-                    foreach ($subs as $subSchema) {
-                        $subSchemas[] = $this->generateSchema($subSchema);
-                    }
-                    $parameters[$property] = $subSchemas;
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new Array_(
+                            array_map(
+                                fn ($subSchema) => new ArrayItem($this->generateSchema($subSchema)),
+                                $subs
+                            )
+                        )
+                    );
 
                     break;
                 case 'not':
@@ -194,7 +291,10 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $this->generateSchema($value);
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $this->generateSchema($value),
+                    );
 
                     break;
             }
@@ -202,7 +302,7 @@ class Generator
     }
 
     /**
-     * @param array<string,mixed> $parameters
+     * @param Arg[] $parameters
      * @throws InvalidSchemaException
      * @return void
      */
@@ -224,7 +324,16 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = Format::from($value->stringValue());
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new StaticCall(
+                            new FullyQualified(Format::class),
+                            'from',
+                            [
+                                new Arg(new String_($value->stringValue()))
+                            ]
+                        )
+                    );
 
                     break;
                 case 'minLength':
@@ -235,7 +344,10 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $value->intValue();
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new Int_($value->intValue()),
+                    );
 
                     break;
                 case 'pattern':
@@ -246,7 +358,10 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $value->stringValue();
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new String_($value->stringValue()),
+                    );
 
                     break;
                 case 'contentEncoding':
@@ -262,7 +377,14 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = ContentEncoding::from($value->stringValue());
+                    $parameters[] = new StaticCall(
+                        new FullyQualified(ContentEncoding::class),
+                        'from',
+                        [
+                            new Arg(new String_($value->stringValue()))
+                        ]
+                    );
+
                     break;
                 case 'contentSchema':
                     if ($value->map() === null) {
@@ -271,14 +393,18 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $this->generateSchema($value);
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $this->generateSchema($value),
+                    );
+
                     break;
             }
         }
     }
 
     /**
-     * @param array<string,mixed> $parameters
+     * @param Arg[] $parameters
      * @throws InvalidSchemaException
      * @return void
      */
@@ -300,8 +426,12 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $number;
-
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $value->int() !== null
+                            ? new Int_($value->intValue())
+                            : new Float_($value->floatValue()),
+                    );
 
                     break;
             }
@@ -309,7 +439,7 @@ class Generator
     }
 
     /**
-     * @param array<string,mixed> $parameters
+     * @param Arg[] $parameters
      * @throws InvalidSchemaException
      * @return void
      */
@@ -321,17 +451,26 @@ class Generator
                 case 'properties':
                 case 'patternProperties':
                 case 'dependentSchemas':
-                    if ($value->map() === null) {
+                    $subSchemas = $value->map();
+
+                    if ($subSchemas === null) {
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a array<string,Schema>'
                         );
                     }
 
-                    $subSchemas = [];
-                    foreach ($value->mapValue() as $key => $subSchema) {
-                        $subSchemas[$key] = $this->generateSchema($subSchema);
-                    }
-                    $parameters[$property] = $subSchemas;
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new Array_(
+                            array_map(
+                                fn ($key) => new ArrayItem(
+                                    key: new String_($key),
+                                    value: $this->generateSchema($subSchemas[$key])
+                                ),
+                                array_keys($subSchemas),
+                            ),
+                        ),
+                    );
 
                     break;
                 case 'additionalProperties':
@@ -341,9 +480,12 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $value->bool() !== null
-                        ? true
-                        : $this->generateSchema($value);
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $value->bool() !== null
+                            ? self::falseExpr()
+                            : $this->generateSchema($value)
+                    );
 
                     break;
                 case 'unevaluatedProperties':
@@ -354,7 +496,10 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $this->generateSchema($value);
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $this->generateSchema($value),
+                    );
 
                     break;
                 case 'required':
@@ -370,20 +515,31 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $value->listRawValue();
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new Array_(
+                            array_map(
+                                fn ($el) => new ArrayItem(new String_($el->stringValue())),
+                                $value->listValue(),
+                            )
+                        )
+                    );
 
                     break;
                 case 'minProperties':
                 case 'maxProperties':
-                    $number = $value->int() ?? $value->float();
+                    $number = $value->int();
 
                     if ($number === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a int|float'
+                            '`' . $property . '` must be a int'
                         );
                     }
 
-                    $parameters[$property] = $number;
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new Int_($number),
+                    );
 
                     break;
                 case 'dependentRequired':
@@ -404,6 +560,10 @@ class Generator
                     }
 
                     $parameters[$property] = $value->mapRawValue();
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $this->phpValueToExpr($value->mapRawValue())
+                    );
 
                     break;
             }
@@ -411,7 +571,7 @@ class Generator
     }
 
     /**
-     * @param array<string,mixed> $parameters
+     * @param Arg[] $parameters
      * @throws InvalidSchemaException
      * @return void
      */
@@ -429,7 +589,10 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $this->generateSchema($value);
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $this->generateSchema($value),
+                    );
 
                     break;
                 case 'prefixItems':
@@ -441,26 +604,33 @@ class Generator
                         );
                     }
 
-                    $subSchemas = [];
-                    foreach ($subs as $subSchema) {
-                        $subSchemas[] = $this->generateSchema($subSchema);
-                    }
-                    $parameters[$property] = $subSchemas;
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new Array_(
+                            array_map(
+                                fn ($subSchema) => new ArrayItem($this->generateSchema($subSchema)),
+                                $subs
+                            )
+                        )
+                    );
 
                     break;
                 case 'minContains':
                 case 'maxContains':
                 case 'minItems':
                 case 'maxItems':
-                    $number = $value->int() ?? $value->float();
+                    $number = $value->int();
 
                     if ($number === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a int|float'
+                            '`' . $property . '` must be a int'
                         );
                     }
 
-                    $parameters[$property] = $number;
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: new Int_($number),
+                    );
 
                     break;
                 case 'uniqueItems':
@@ -470,7 +640,12 @@ class Generator
                         );
                     }
 
-                    $parameters[$property] = $value->boolValue();
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $value->boolValue()
+                            ? self::trueExpr()
+                            : self::falseExpr(),
+                    );
 
                     break;
             }
