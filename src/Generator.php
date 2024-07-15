@@ -8,17 +8,17 @@ use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\Exception\InvalidSchemaKeywordValueException;
 use Giann\Trunk\Trunk;
 use PhpParser\Node\Arg;
-use PhpParser\Node\ArrayItem;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\ArrayItem;
 use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
-use PhpParser\Node\Scalar\Float_;
-use PhpParser\Node\Scalar\Int_;
+use PhpParser\Node\Scalar\DNumber;
+use PhpParser\Node\Scalar\LNumber;
 use PhpParser\Node\Scalar\String_;
 use PhpParser\Node\Stmt\Expression;
 use PhpParser\Parser;
@@ -346,7 +346,7 @@ class Generator
 
                     $parameters[] = new Arg(
                         name: new Identifier($property),
-                        value: new Int_($value->intValue()),
+                        value: new LNumber($value->intValue()),
                     );
 
                     break;
@@ -429,8 +429,8 @@ class Generator
                     $parameters[] = new Arg(
                         name: new Identifier($property),
                         value: $value->int() !== null
-                            ? new Int_($value->intValue())
-                            : new Float_($value->floatValue()),
+                            ? new LNumber($value->intValue())
+                            : new DNumber($value->floatValue()),
                     );
 
                     break;
@@ -538,7 +538,7 @@ class Generator
 
                     $parameters[] = new Arg(
                         name: new Identifier($property),
-                        value: new Int_($number),
+                        value: new LNumber($number),
                     );
 
                     break;
@@ -629,7 +629,7 @@ class Generator
 
                     $parameters[] = new Arg(
                         name: new Identifier($property),
-                        value: new Int_($number),
+                        value: new LNumber($number),
                     );
 
                     break;
