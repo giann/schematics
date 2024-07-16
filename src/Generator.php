@@ -11,9 +11,9 @@ use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ArrayItem;
+use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Expr\New_;
-use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
@@ -166,12 +166,9 @@ class Generator
                             value: new Array_(
                                 array_map(
                                     fn (Trunk $type) => new ArrayItem(
-                                        new StaticCall(
+                                        new ClassConstFetch(
                                             new FullyQualified(Type::class),
-                                            'from',
-                                            [
-                                                new Arg(new String_($type->stringValue()))
-                                            ]
+                                            ucfirst($type->stringValue())
                                         )
                                     ),
                                     $types
@@ -326,12 +323,9 @@ class Generator
 
                     $parameters[] = new Arg(
                         name: new Identifier($property),
-                        value: new StaticCall(
+                        value: new ClassConstFetch(
                             new FullyQualified(Format::class),
-                            'from',
-                            [
-                                new Arg(new String_($value->stringValue()))
-                            ]
+                            ucfirst($value->stringValue())
                         )
                     );
 
@@ -377,12 +371,9 @@ class Generator
                         );
                     }
 
-                    $parameters[] = new StaticCall(
+                    $parameters[] = new ClassConstFetch(
                         new FullyQualified(ContentEncoding::class),
-                        'from',
-                        [
-                            new Arg(new String_($value->stringValue()))
-                        ]
+                        ucfirst($value->stringValue())
                     );
 
                     break;
