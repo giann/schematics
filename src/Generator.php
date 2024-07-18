@@ -218,6 +218,17 @@ class Generator
                     );
 
                     break;
+                case 'example': // Not a valid json schema keyword but we do it anyway, converting it to "examples": [single_examplel]
+                    $parameters[] = new Arg(
+                        name: new Identifier('examples'),
+                        value: new Array_(
+                            [
+                                new ArrayItem($this->phpValueToExpr($value))
+                            ]
+                        )
+                    );
+
+                    break;
                 case 'examples':
                 case 'enum':
                     if ($value->list() === null) {
