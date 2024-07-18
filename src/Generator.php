@@ -223,7 +223,7 @@ class Generator
                         name: new Identifier('examples'),
                         value: new Array_(
                             [
-                                new ArrayItem($this->phpValueToExpr($value))
+                                new ArrayItem($this->phpValueToExpr($value->data))
                             ]
                         )
                     );
