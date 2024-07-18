@@ -168,7 +168,7 @@ class Generator
                                     fn (Trunk $type) => new ArrayItem(
                                         new ClassConstFetch(
                                             new FullyQualified(Type::class),
-                                            ucfirst($type->stringValue())
+                                            self::dashToCamel($type->stringValue())
                                         )
                                     ),
                                     $types
@@ -309,6 +309,11 @@ class Generator
         }
     }
 
+    private static function dashToCamel(string $input): string
+    {
+        return ucfirst(str_replace(' ', '', ucwords(str_replace('-', ' ', $input))));
+    }
+
     /**
      * @param Arg[] $parameters
      * @throws InvalidSchemaException
@@ -336,7 +341,7 @@ class Generator
                         name: new Identifier($property),
                         value: new ClassConstFetch(
                             new FullyQualified(Format::class),
-                            ucfirst($value->stringValue())
+                            self::dashToCamel($value->stringValue())
                         )
                     );
 
@@ -384,7 +389,7 @@ class Generator
 
                     $parameters[] = new ClassConstFetch(
                         new FullyQualified(ContentEncoding::class),
-                        ucfirst($value->stringValue())
+                        self::dashToCamel($value->stringValue())
                     );
 
                     break;
