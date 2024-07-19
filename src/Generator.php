@@ -134,7 +134,7 @@ class Generator
         // If some keywords were not processed, it means the schema is invalid
         $unprocessed = array_filter(
             array_keys($keywords),
-            fn ($keyword) => $keywords[$keyword] === false
+            fn ($keyword) => $keywords[$keyword] === false && $keyword !== '$schema'
         );
         if (count($unprocessed) > 0) {
             throw new InvalidSchemaException('Invalid or misplaced keywords at ' . $path . ': ' . implode(', ', $unprocessed));
