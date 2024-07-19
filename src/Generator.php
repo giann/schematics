@@ -170,7 +170,7 @@ class Generator
                         ))
                     ) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a string|string[] of those possible values: '
+                            '`' . $property . '` must be a string|string[] of those possible values at ' . $path . ': '
                                 . implode(', ', array_map(fn ($case) => $case->value, Type::cases()))
                         );
                     }
@@ -203,7 +203,7 @@ class Generator
                 case 'description':
                     if ($value->string() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a string'
+                            '`' . $property . '` must be a string at ' . $path
                         );
                     }
 
@@ -219,7 +219,7 @@ class Generator
 
                     if ($rawDefs === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a array<string,Schema>'
+                            '`' . $property . '` must be a array<string,Schema> at ' . $path
                         );
                     }
 
@@ -254,7 +254,7 @@ class Generator
                 case 'enum':
                     if ($value->list() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a mixed[]'
+                            '`' . $property . '` must be a mixed[] at ' . $path
                         );
                     }
 
@@ -283,7 +283,7 @@ class Generator
                 case 'writeOnly':
                     if ($value->bool() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be bool'
+                            '`' . $property . '` must be bool at ' . $path
                         );
                     }
 
@@ -301,7 +301,7 @@ class Generator
 
                     if ($subs === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema[]'
+                            '`' . $property . '` must be a Schema[] at ' . $path
                         );
                     }
 
@@ -321,7 +321,7 @@ class Generator
                 case 'not':
                     if ($value->map() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema'
+                            '`' . $property . '` must be a Schema at ' . $path
                         );
                     }
 
@@ -362,7 +362,7 @@ class Generator
                         )
                     ) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a string of those possible values: '
+                            '`' . $property . '` must be a string of those possible values at ' . $path . ': '
                                 . implode(', ', array_map(fn ($case) => $case->value, Format::cases()))
                         );
                     }
@@ -381,7 +381,7 @@ class Generator
                 case 'maxLength':
                     if ($value->int() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a int'
+                            '`' . $property . '` must be a int at ' . $path
                         );
                     }
 
@@ -396,7 +396,7 @@ class Generator
                 case 'contentMediaType':
                     if ($value->string() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a string'
+                            '`' . $property . '` must be a string at ' . $path
                         );
                     }
 
@@ -415,7 +415,7 @@ class Generator
                         )
                     ) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a string of those possible values: '
+                            '`' . $property . '` must be a string of those possible values at ' . $path . ': '
                                 . implode(', ', array_map(fn ($case) => $case->value, ContentEncoding::cases()))
                         );
                     }
@@ -430,7 +430,7 @@ class Generator
                 case 'contentSchema':
                     if ($value->map() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema'
+                            '`' . $property . '` must be a Schema at ' . $path
                         );
                     }
 
@@ -467,7 +467,7 @@ class Generator
 
                     if ($number === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a int|float'
+                            '`' . $property . '` must be a int|float at ' . $path
                         );
                     }
 
@@ -504,7 +504,7 @@ class Generator
 
                     if ($subSchemas === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a array<string,Schema>'
+                            '`' . $property . '` must be a array<string,Schema> at ' . $path
                         );
                     }
 
@@ -526,7 +526,7 @@ class Generator
                 case 'additionalProperties':
                     if ($value->map() === null && ($value->bool() === null || $value->bool() === true)) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema|false'
+                            '`' . $property . '` must be a Schema|false at ' . $path
                         );
                     }
 
@@ -543,7 +543,7 @@ class Generator
                 case 'propertyNames':
                     if ($value->map() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema'
+                            '`' . $property . '` must be a Schema at ' . $path
                         );
                     }
 
@@ -563,7 +563,7 @@ class Generator
                         ))
                     ) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a string[]'
+                            '`' . $property . '` must be a string[] at ' . $path
                         );
                     }
 
@@ -585,7 +585,7 @@ class Generator
 
                     if ($number === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a int'
+                            '`' . $property . '` must be a int at ' . $path
                         );
                     }
 
@@ -609,7 +609,7 @@ class Generator
                         ))
                     ) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a array<string,string[]>'
+                            '`' . $property . '` must be a array<string,string[]> at ' . $path
                         );
                     }
 
@@ -643,7 +643,7 @@ class Generator
                 case 'unevaluatedItems':
                     if ($value->map() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema'
+                            '`' . $property . '` must be a Schema at ' . $path
                         );
                     }
 
@@ -659,7 +659,7 @@ class Generator
 
                     if ($subs === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema[]'
+                            '`' . $property . '` must be a Schema[] at ' . $path
                         );
                     }
 
@@ -684,7 +684,7 @@ class Generator
 
                     if ($number === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a int'
+                            '`' . $property . '` must be a int ' . $path
                         );
                     }
 
@@ -698,7 +698,7 @@ class Generator
                 case 'uniqueItems':
                     if ($value->bool() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be bool'
+                            '`' . $property . '` must be bool ' . $path
                         );
                     }
 
