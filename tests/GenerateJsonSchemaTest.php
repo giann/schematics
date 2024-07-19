@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use PhpParser\PrettyPrinter;
 use Giann\Schematics\ArraySchema;
 use Giann\Schematics\BooleanSchema;
+use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\Exception\InvalidSchemaValueException;
 use Giann\Schematics\ExcludedFromSchema;
 use Giann\Schematics\Format;
@@ -242,6 +243,29 @@ final class GenerateJsonSchemaTest extends TestCase
         $this->assertEquals(Schema::classSchema(Hero::class)->jsonSerialize(), $reconstructed->jsonSerialize());
     }
 
+    public function testInvalidSchema(): void
+    {
+        try {
+            (new Generator)->generateSchema(
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'list' => [
+                            // Misplaced `items` keyword
+                            'items' => [
+                                'type' => 'string'
+                            ]
+                        ]
+                    ]
+                ]
+            );
+
+            $this->assertTrue(false);
+        } catch (InvalidSchemaException $e) {
+            $this->assertEquals('Invalid or misplaced keywords at #/properties/list: items', $e->getMessage());
+        }
+    }
+
     private function testBasicValidation(): void
     {
         try {
@@ -259,7 +283,6 @@ final class GenerateJsonSchemaTest extends TestCase
 
             $this->assertTrue(true);
         } catch (InvalidSchemaValueException $e) {
-            fwrite(STDERR, $e->getMessage());
             $this->assertTrue(false);
         }
     }

@@ -85,11 +85,11 @@ class Schema implements JsonSerializable
         ?string $enumClass = null,
     ) {
         if ($this->enum === null && $enumClass !== null) {
-            $this->enum = ($this->enum ?? []) + self::classToEnum($enumClass);
+            $this->enum = array_merge($this->enum ?? [], self::classToEnum($enumClass));
         }
 
         if ($this->enum === null && $enumPattern !== null) {
-            $this->enum = ($this->enum ?? []) + self::patternToEnum($enumPattern);
+            $this->enum = array_merge($this->enum ?? [], self::patternToEnum($enumPattern) ?? []);
         }
     }
 
@@ -104,7 +104,6 @@ class Schema implements JsonSerializable
     }
 
 
-    // TODO: we miss some ref to resolve
     protected function resolveRef(?Schema $root): Schema
     {
         $root ??= $this;
@@ -309,7 +308,7 @@ class Schema implements JsonSerializable
 
             $ref = new Schema(ref: $parent);
             $ref->resolvedRef = '#/$defs/' . $parent;
-            $schema->allOf = ($schema->allOf ?? []) + [$ref];
+            $schema->allOf = array_merge($schema->allOf ?? [], [$ref]);
         }
 
         $required = [];
