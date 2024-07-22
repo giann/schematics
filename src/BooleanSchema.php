@@ -37,6 +37,7 @@ class BooleanSchema extends Schema
         ?string $ref = null,
         array $defs = [],
         ?string $description = null,
+        ?array $examples = null,
         $default = new NullConst(),
         ?bool $deprecated = null,
         ?bool $readOnly = null,
@@ -47,8 +48,6 @@ class BooleanSchema extends Schema
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
-        ?string $enumPattern = null,
-        ?string $enumClass = null
     ) {
         parent::__construct(
             [Type::Boolean],
@@ -58,6 +57,7 @@ class BooleanSchema extends Schema
             defs: $defs,
             title: $title,
             description: $description,
+            examples: $examples,
             default: $default,
             deprecated: $deprecated,
             readOnly: $readOnly,
@@ -68,8 +68,6 @@ class BooleanSchema extends Schema
             oneOf: $oneOf,
             anyOf: $anyOf,
             not: $not,
-            enumPattern: $enumPattern,
-            enumClass: $enumClass
         );
     }
 }
