@@ -11,6 +11,7 @@ use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ArrayItem;
+use PhpParser\Node\Expr\Cast\Bool_;
 use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Expr\New_;
@@ -140,6 +141,13 @@ class Generator
             throw new InvalidSchemaException('Invalid or misplaced keywords at ' . $path . ': ' . implode(', ', $unprocessed));
         }
 
+        if ($path === '#') {
+            $parameters[] = new Arg(
+                name: new Identifier('isRoot'),
+                value: self::trueExpr(),
+            );
+        }
+
         return new New_(new FullyQualified($baseClass), $parameters);
     }
 
@@ -156,6 +164,14 @@ class Generator
         foreach ($rawSchema->mapValue() as $property => $value) {
             // Generate parameters
             switch ($property) {
+                case '$schema':
+                    $parameters[] = new Arg(
+                        name: new Identifier('draft'),
+                        value: new String_($value->stringValue()),
+                    );
+
+                    $keywords['draft'] = true;
+                    break;
                 case 'type':
                     if (
                         // A list

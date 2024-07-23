@@ -12,6 +12,8 @@ class IntegerSchema extends Schema
 {
     /**
      * @param string|null $id
+     * @param bool $isRoot
+     * @param string|null $draft
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
@@ -37,6 +39,8 @@ class IntegerSchema extends Schema
      * @param int|null $exclusiveMaximum If the instance is a number, then the instance is valid only if it has a value strictly less than (not equal to) "exclusiveMaximum"
      */
     public function __construct(
+        bool $isRoot = false,
+        ?string $draft = Draft::December2020->value,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -65,6 +69,8 @@ class IntegerSchema extends Schema
     ) {
         parent::__construct(
             [Type::Integer],
+            isRoot: $isRoot,
+            draft: $draft,
             id: $id,
             anchor: $anchor,
             ref: $ref,

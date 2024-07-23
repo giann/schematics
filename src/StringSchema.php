@@ -12,6 +12,8 @@ class StringSchema extends Schema
 {
     /**
      * @param string|null $id
+     * @param bool $isRoot
+     * @param string|null $draft
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
@@ -39,6 +41,8 @@ class StringSchema extends Schema
      * @param Schema|null $contentSchema If the instance is a string, and if "contentMediaType" is present, this property contains a schema which describes the structure of the string
      */
     public function __construct(
+        bool $isRoot = false,
+        ?string $draft = Draft::December2020->value,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -69,6 +73,8 @@ class StringSchema extends Schema
     ) {
         parent::__construct(
             [Type::String],
+            isRoot: $isRoot,
+            draft: $draft,
             id: $id,
             anchor: $anchor,
             ref: $ref,

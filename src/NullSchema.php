@@ -11,6 +11,8 @@ final class NullSchema extends Schema
 {
     /**
      * @param string|null $id
+     * @param bool $isRoot
+     * @param string|null $draft
      * @param string|null $anchor
      * @param array<string,Schema|CircularReference|null> $defs
      * @param string|null $title
@@ -20,6 +22,8 @@ final class NullSchema extends Schema
      * @param boolean|null $writeOnly
      */
     public function __construct(
+        bool $isRoot = false,
+        ?string $draft = Draft::December2020->value,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -31,6 +35,8 @@ final class NullSchema extends Schema
     ) {
         parent::__construct(
             [Type::Null],
+            isRoot: $isRoot,
+            draft: $draft,
             id: $id,
             anchor: $anchor,
             defs: $defs,

@@ -42,6 +42,8 @@ class Schema implements JsonSerializable
 
     /**
      * @param Type[] $type
+     * @param bool $isRoot
+     * @param string|null $draft
      * @param string|null $id Defines a URI for the schema, and the base URI that other URI references within the schema are resolved against
      * @param string|null $anchor The "$anchor" keyword is used to specify a name fragment. It is an identifier keyword that can only be used to create plain name fragments
      * @param string|null $ref Reference a schema, and provides the ability to validate recursive structures through self-reference
@@ -64,6 +66,8 @@ class Schema implements JsonSerializable
      */
     public function __construct(
         public array $type = [],
+        public bool $isRoot = false,
+        public ?string $draft = Draft::December2020->value,
         public ?string $id = null,
         public ?string $anchor = null,
         public ?string $ref = null,
@@ -294,6 +298,7 @@ class Schema implements JsonSerializable
         }
 
         $root = $root ?? $schema;
+        $root->isRoot = true;
 
         // Does it extends another class/schema?
         $parentReflection = $classReflection->getParentClass();
@@ -628,7 +633,8 @@ class Schema implements JsonSerializable
     public function jsonSerialize(): array
     {
         $types = array_map(fn (Type $element) => $element->value, $this->type);
-        return (!empty($types) ? ['type' => count($types) > 1 ? $types : $types[0]] : [])
+        return ($this->isRoot ? ['$schema' => $this->draft] : [])
+            + (!empty($types) ? ['type' => count($types) > 1 ? $types : $types[0]] : [])
             + ($this->id !== null ? ['$id' => $this->id] : [])
             + ($this->anchor !== null ? ['$anchor' => $this->anchor] : [])
             + ($this->resolvedRef !== null ? ['$ref' => $this->resolvedRef] : [])

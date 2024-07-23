@@ -5,18 +5,20 @@ declare(strict_types=1);
 namespace Giann\Schematics;
 
 use Attribute;
-use UnitEnum;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD)]
 class BooleanSchema extends Schema
 {
     /**
      * @param string|null $id
+     * @param bool $isRoot
+     * @param string|null $draft
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
      * @param string|null $title
      * @param string|null $description
+     * @param string[]|null $examples
      * @param mixed $default
      * @param boolean|null $deprecated
      * @param boolean|null $readOnly
@@ -27,10 +29,10 @@ class BooleanSchema extends Schema
      * @param Schema[]|null $oneOf
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
-     * @param string|null $enumPattern
-     * @param class-string<UnitEnum>|null $enumClass
      */
     public function __construct(
+        bool $isRoot = false,
+        ?string $draft = Draft::December2020->value,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -51,6 +53,8 @@ class BooleanSchema extends Schema
     ) {
         parent::__construct(
             [Type::Boolean],
+            isRoot: $isRoot,
+            draft: $draft,
             id: $id,
             anchor: $anchor,
             ref: $ref,

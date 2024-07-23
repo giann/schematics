@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use PhpParser\PrettyPrinter;
 use Giann\Schematics\ArraySchema;
 use Giann\Schematics\BooleanSchema;
+use Giann\Schematics\Draft;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\Exception\InvalidSchemaValueException;
 use Giann\Schematics\ExcludedFromSchema;
@@ -145,6 +146,7 @@ final class GenerateJsonSchemaTest extends TestCase
     {
         $this->assertEquals(
             [
+                '$schema' => Draft::December2020->value,
                 'type' => 'object',
                 'properties' => [
                     'superName' => [

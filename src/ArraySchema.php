@@ -12,6 +12,8 @@ class ArraySchema extends Schema
 {
     /**
      * @param string|null $id
+     * @param bool $isRoot
+     * @param string|null $draft
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
@@ -39,6 +41,8 @@ class ArraySchema extends Schema
      * @param null|Schema $unevaluatedItems Applies to items not evaluated by "prefixItems", "items" or "contains"
      */
     public function __construct(
+        bool $isRoot = false,
+        ?string $draft = Draft::December2020->value,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -71,6 +75,8 @@ class ArraySchema extends Schema
     ) {
         parent::__construct(
             [Type::Array],
+            isRoot: $isRoot,
+            draft: $draft,
             id: $id,
             anchor: $anchor,
             ref: $ref,
