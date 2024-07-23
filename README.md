@@ -1,10 +1,6 @@
 # schematics
 
-Translates php classes to JSON Schema by annotating them with attributes. Provides also validation.
-
-## Validation
-
-**schematics** can validate data according to the annotated schemas. It currently covers 84% of the [official JSON Schema test suite for the 2020-12 draft](https://github.com/json-schema-org/JSON-Schema-Test-Suite).
+Translates php classes to JSON Schema by annotating them with attributes.
 
 ## Example
 
@@ -131,16 +127,3 @@ Results in the following JSON Schema:
   "required": ["superName", "power"]
 }
 ```
-
-## Not yet implemented
-
-- string format `7bit`
-- string format `8bit`
-- string format `binary`
-- string format `base16`
-- string format `base32`
-- [if/then/else](https://json-schema.org/understanding-json-schema/reference/conditionals.html#if-then-else)
-- [`unevaluatedProperties`](https://json-schema.org/understanding-json-schema/reference/object.html#unevaluated-properties)
-- `$id`
-- anchors
-- `$ref` other than `#/$defs/<name>`

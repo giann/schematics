@@ -267,46 +267,4 @@ final class GenerateJsonSchemaTest extends TestCase
             $this->assertEquals('Invalid or misplaced keywords at #/properties/list: items', $e->getMessage());
         }
     }
-
-    private function testBasicValidation(): void
-    {
-        try {
-            $thor = new Hero(
-                id: 'f554a7c7-5c33-415f-a0ca-db19be81f868',
-                names: ['Bruce Banner'],
-                age: 30,
-                sex: Sex::Male,
-                height: 174,
-                superName: 'Thor',
-                power: Power::Strong->value,
-            );
-
-            (new Validator())->validateInstance($thor);
-
-            $this->assertTrue(true);
-        } catch (InvalidSchemaValueException $e) {
-            $this->assertTrue(false);
-        }
-    }
-
-    private function testBasicValidationError(): void
-    {
-        try {
-            $thor = new Hero(
-                id: 'dumpid',
-                names: ['Bruce Banner'],
-                age: 30,
-                sex: Sex::Male,
-                height: '174',
-                superName: 'Thor',
-                power: Power::Strong->value,
-            );
-
-            (new Validator())->validateInstance($thor);
-
-            $this->assertTrue(false);
-        } catch (InvalidSchemaValueException $e) {
-            $this->assertEquals('Expected to be uuid got `dumpid` at #/allOf/0/#/$defs/Person/id', $e->getMessage());
-        }
-    }
 }
