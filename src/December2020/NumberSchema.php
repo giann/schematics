@@ -2,20 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Giann\Schematics;
+namespace Giann\Schematics\December2020;
 
 use Attribute;
 use UnitEnum;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD)]
-class RefSchema extends Schema
+class NumberSchema extends Schema
 {
     /**
-     * @param string|null $id
      * @param bool $isRoot
-     * @param string|null $draft
+     * @param string|null $id
      * @param string|null $anchor
-     * @param string $ref
+     * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
      * @param string|null $title
      * @param string|null $description
@@ -32,14 +31,18 @@ class RefSchema extends Schema
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
+     * @param int|float|null $multipleOf A numeric instance is valid only if division by this keyword's value results in an integer
+     * @param int|float|null $minimum Validates only if the instance is greater than or exactly equal to "minimum"
+     * @param int|float|null $maximum Validates only if the instance is less than or exactly equal to "maximum"
+     * @param int|float|null $exclusiveMinimum If the instance is a number, then the instance is valid only if it has a value strictly greater than (not equal to) "exclusiveMinimum"
+     * @param int|float|null $exclusiveMaximum If the instance is a number, then the instance is valid only if it has a value strictly less than (not equal to) "exclusiveMaximum"
      */
     public function __construct(
-        string $ref,
         bool $isRoot = false,
-        ?string $draft = Draft::December2020->value,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
+        ?string $ref = null,
         array $defs = [],
         ?string $description = null,
         ?array $examples = null,
@@ -55,13 +58,19 @@ class RefSchema extends Schema
         ?Schema $not = null,
         ?string $enumPattern = null,
         ?string $enumClass = null,
+
+        public int|float|null $multipleOf = null,
+        public int|float|null $minimum = null,
+        public int|float|null $maximum = null,
+        public int|float|null $exclusiveMinimum = null,
+        public int|float|null $exclusiveMaximum = null
     ) {
         parent::__construct(
-            ref: $ref,
+            [Type::Number],
             isRoot: $isRoot,
-            draft: $draft,
             id: $id,
             anchor: $anchor,
+            ref: $ref,
             defs: $defs,
             title: $title,
             description: $description,
@@ -79,5 +88,17 @@ class RefSchema extends Schema
             enumPattern: $enumPattern,
             enumClass: $enumClass,
         );
+    }
+
+    public function jsonSerialize(): array
+    {
+        $serialized = parent::jsonSerialize();
+
+        return $serialized
+            + ($this->multipleOf !== null ? ['multipleOf' => $this->multipleOf] : [])
+            + ($this->minimum !== null ? ['minimum' => $this->minimum] : [])
+            + ($this->maximum !== null ? ['maximum' => $this->maximum] : [])
+            + ($this->exclusiveMinimum !== null ? ['exclusiveMinimum' => $this->exclusiveMinimum] : [])
+            + ($this->exclusiveMaximum !== null ? ['exclusiveMaximum' => $this->exclusiveMaximum] : []);
     }
 }

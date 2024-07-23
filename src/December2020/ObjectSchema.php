@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Giann\Schematics;
+namespace Giann\Schematics\December2020;
 
 use Attribute;
 use UnitEnum;
@@ -13,7 +13,6 @@ class ObjectSchema extends Schema
     /**
      * @param string|null $id
      * @param bool $isRoot
-     * @param string|null $draft
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
@@ -45,7 +44,6 @@ class ObjectSchema extends Schema
      */
     public function __construct(
         bool $isRoot = false,
-        ?string $draft = Draft::December2020->value,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -80,7 +78,6 @@ class ObjectSchema extends Schema
         parent::__construct(
             [Type::Object],
             isRoot: $isRoot,
-            draft: $draft,
             id: $id,
             anchor: $anchor,
             ref: $ref,

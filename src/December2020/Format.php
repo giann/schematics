@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Giann\Schematics;
+namespace Giann\Schematics\December2020;
 
 // https://json-schema.org/understanding-json-schema/reference/string.html#id8
 enum Format: string

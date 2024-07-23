@@ -1,6 +1,6 @@
 # schematics
 
-Translates php classes to JSON Schema by annotating them with attributes.
+Translates php classes to JSON Schema by annotating them with attributes. Supports from draft-04 to 2020-12.
 
 ## Example
 
@@ -127,3 +127,8 @@ Results in the following JSON Schema:
   "required": ["superName", "power"]
 }
 ```
+
+## Not Yet Supported
+
+- `$dynamicRef`
+- `$dynamicAnchor`

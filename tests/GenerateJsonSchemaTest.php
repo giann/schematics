@@ -4,21 +4,19 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use PhpParser\PrettyPrinter;
-use Giann\Schematics\ArraySchema;
-use Giann\Schematics\BooleanSchema;
+use Giann\Schematics\December2020\ArraySchema;
+use Giann\Schematics\December2020\BooleanSchema;
 use Giann\Schematics\Draft;
 use Giann\Schematics\Exception\InvalidSchemaException;
-use Giann\Schematics\Exception\InvalidSchemaValueException;
 use Giann\Schematics\ExcludedFromSchema;
-use Giann\Schematics\Format;
+use Giann\Schematics\December2020\Format;
 use Giann\Schematics\Generator;
-use Giann\Schematics\IntegerSchema;
+use Giann\Schematics\December2020\IntegerSchema;
 use Giann\Schematics\NotRequired;
-use Giann\Schematics\ObjectSchema;
-use Giann\Schematics\Property\Description;
-use Giann\Schematics\Schema;
-use Giann\Schematics\StringSchema;
-use Giann\Schematics\Validator;
+use Giann\Schematics\December2020\ObjectSchema;
+use Giann\Schematics\December2020\Property\Description;
+use Giann\Schematics\December2020\Schema;
+use Giann\Schematics\December2020\StringSchema;
 
 enum Sex: string
 {

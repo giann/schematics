@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Giann\Schematics\Property;
+namespace Giann\Schematics\December2020\Property;
 
 use Attribute;
 
@@ -14,4 +14,3 @@ final class DefaultValue extends Property
         parent::__construct('default', $default);
     }
 }
-
