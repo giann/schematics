@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Giann\Schematics\December2020;
+namespace Giann\Schematics\Draft04;
 
 use Attribute;
 use BackedEnum;
 use Giann\Schematics\Draft;
-use Giann\Schematics\December2020\Property\Property;
+use Giann\Schematics\Draft04\Property\Property;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\ExcludedFromSchema;
 use Giann\Schematics\NotRequired;
@@ -43,32 +43,26 @@ class Schema implements JsonSerializable
     // A boolean is a valid schema: true validates anything and false nothing
     private ?bool $unilateral = null;
 
-    public static Draft $draft = Draft::December2020;
+    public static Draft $draft = Draft::Draft04;
 
     /**
      * @param Type[] $type
      * @param bool $isRoot
      * @param string|null $id Defines a URI for the schema, and the base URI that other URI references within the schema are resolved against
-     * @param string|null $anchor The "$anchor" keyword is used to specify a name fragment. It is an identifier keyword that can only be used to create plain name fragments
      * @param string|null $ref Reference a schema, and provides the ability to validate recursive structures through self-reference
-     * @param array<string,Schema|CircularReference|null> $defs Reserves a location for schema authors to inline re-usable JSON Schemas into a more general schema
+     * @param array<string,Schema|CircularReference|null> $definitions Reserves a location for schema authors to inline re-usable JSON Schemas into a more general schema
      * @param string|null $title
      * @param string|null $description
-     * @param string|null $comment
      * @param mixed[]|null $examples
      * @param mixed $default
-     * @param boolean|null $deprecated Indicates that applications should refrain from usage of the declared property
+ Indicates that applications should refrain from usage of the declared property
      * @param boolean|null $readOnly Indicates that the value of the instance is managed exclusively by the server or the owning authority, and attempts by a user agent to modify the value of this property are expected to be ignored or rejected by a server
      * @param boolean|null $writeOnly Indicates that the value is never present when the instance is retrieved from the owning authority
-     * @param mixed $const Restrict a value to a single value
      * @param mixed[]|null $enum An instance validates successfully against this keyword if its value is equal to one of the elements in this keyword's array value
      * @param Schema[]|null $allOf An instance validates successfully against this keyword if it validates successfully against all schemas defined by this keyword's value
      * @param Schema[]|null $oneOf An instance validates successfully against this keyword if it validates successfully against exactly one schema defined by this keyword's value
      * @param Schema[]|null $anyOf An instance validates successfully against this keyword if it validates successfully against at least one schema defined by this keyword's value
      * @param Schema|null $not An instance is valid against this keyword if it fails to validate successfully against the schema defined by this keyword
-     * @param Schema|null $if Instances that successfully validate against this keyword's subschema MUST also be valid against the subschema value of the "then" keyword, if present
-     * @param Schema|null $then When "if" is present, and the instance successfully validates against its subschema, then validation succeeds against this keyword if the instance also successfully validates against this keyword's subschema
-     * @param Schema|null $else When "if" is present, and the instance fails to validate against its subschema, then validation succeeds against this keyword if the instance successfully validates against this keyword's subschema
      * @param string|null $enumPattern Builds enum field using a list of constant matching this pattern (ex: 'MyClass::VALUE_*')
      * @param class-string<UnitEnum>|null $enumClass Builds enum field using a php enum 
      */
@@ -76,26 +70,20 @@ class Schema implements JsonSerializable
         public array $type = [],
         public bool $isRoot = false,
         public ?string $id = null,
-        public ?string $anchor = null,
         public ?string $ref = null,
-        public array $defs = [],
+        public array $definitions = [],
         public ?string $title = null,
         public ?string $description = null,
-        public ?string $comment = null,
         public ?array $examples = null,
         public mixed $default = new NullConst(),
         public ?bool $deprecated = null,
         public ?bool $readOnly = null,
         public ?bool $writeOnly = null,
-        public mixed $const = null,
         public ?array $enum = null,
         public ?array $allOf = null,
         public ?array $oneOf = null,
         public ?array $anyOf = null,
         public ?Schema $not = null,
-        public ?Schema $if = null,
-        public ?Schema $then = null,
-        public ?Schema $else = null,
         ?string $enumPattern = null,
         ?string $enumClass = null,
     ) {
@@ -128,17 +116,17 @@ class Schema implements JsonSerializable
             if ($ref == '#') {
                 $this->resolvedRef = '#';
             } else {
-                $this->resolvedRef = '#/$defs/' . $ref;
+                $this->resolvedRef = '#/$definitions/' . $ref;
 
-                if (!isset($root->defs[$ref])) {
-                    $root->defs[$ref] = new CircularReference(); // Avoid circular ref resolving
+                if (!isset($root->definitions[$ref])) {
+                    $root->definitions[$ref] = new CircularReference(); // Avoid circular ref resolving
                     $schema = self::classSchema($ref, $root);
 
                     if ($schema !== null && $schema instanceof Schema) {
-                        $root->defs[$ref] = $schema;
+                        $root->definitions[$ref] = $schema;
                     } else {
                         // We did not resolve it, it's up to the user to have a resolver
-                        unset($root->defs[$ref]);
+                        unset($root->definitions[$ref]);
                         $this->resolvedRef = $ref; // No need to investigate further
                     }
                 }
@@ -316,14 +304,14 @@ class Schema implements JsonSerializable
         if ($parentReflection !== false) {
             $parent = $parentReflection->getName();
 
-            if (!isset($root->defs[$parent])) {
-                $root->defs[$parent] = new CircularReference(); // Avoid circular ref resolving
+            if (!isset($root->definitions[$parent])) {
+                $root->definitions[$parent] = new CircularReference(); // Avoid circular ref resolving
                 $parentSchema = self::classSchema($parent, $root);
-                $root->defs[$parent] = $parentSchema instanceof Schema ? $parentSchema->resolveRef($root) : $parentSchema;
+                $root->definitions[$parent] = $parentSchema instanceof Schema ? $parentSchema->resolveRef($root) : $parentSchema;
             }
 
             $ref = new Schema(ref: $parent);
-            $ref->resolvedRef = '#/$defs/' . $parent;
+            $ref->resolvedRef = '#/$definitions/' . $parent;
             $schema->allOf = array_merge($schema->allOf ?? [], [$ref]);
         }
 
@@ -541,8 +529,6 @@ class Schema implements JsonSerializable
                     $propertySchema = new StringSchema();
                     break;
                 case 'int':
-                    $propertySchema = new IntegerSchema();
-                    break;
                 case 'float':
                     $propertySchema = new NumberSchema();
                     break;
@@ -646,31 +632,25 @@ class Schema implements JsonSerializable
         $types = array_map(fn (Type $element) => $element->value, $this->type);
         return ($this->isRoot ? ['$schema' => self::$draft->value] : [])
             + (!empty($types) ? ['type' => count($types) > 1 ? $types : $types[0]] : [])
-            + ($this->id !== null ? ['$id' => $this->id] : [])
-            + ($this->anchor !== null ? ['$anchor' => $this->anchor] : [])
+            + ($this->id !== null ? ['id' => $this->id] : [])
             + ($this->resolvedRef !== null ? ['$ref' => $this->resolvedRef] : [])
             + ($this->resolvedRef === null && $this->ref !== null ? ['$ref' => $this->ref] : [])
-            + (!empty($this->defs) ? [
-                '$defs' => array_map(
+            + (!empty($this->definitions) ? [
+                'definitions' => array_map(
                     fn ($el) => $el instanceof Schema ? $el->jsonSerialize() : $el,
-                    $this->defs
+                    $this->definitions
                 )
             ] : [])
             + ($this->title !== null ? ['title' => $this->title] : [])
             + ($this->description !== null ? ['description' => $this->description] : [])
-            + ($this->comment !== null ? ['$comment' => $this->comment] : [])
             + (!($this->default instanceof NullConst) ? ['default' => $this->default] : [])
             + ($this->deprecated !== null ? ['deprecated' => $this->deprecated] : [])
             + ($this->readOnly !== null ? ['readOnly' => $this->readOnly] : [])
             + ($this->writeOnly !== null ? ['writeOnly' => $this->writeOnly] : [])
-            + ($this->const !== null ? ['const' => $this->const instanceof NullConst ? null : $this->const] : [])
             + ($this->enum !== null ? ['enum' => $this->enum] : [])
             + ($this->allOf !== null ? ['allOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->allOf)] : [])
             + ($this->oneOf !== null ? ['oneOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->oneOf)] : [])
             + ($this->anyOf !== null ? ['anyOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->anyOf)] : [])
-            + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : [])
-            + ($this->if !== null ? ['if' => $this->if->jsonSerialize()] : [])
-            + ($this->then !== null ? ['then' => $this->then->jsonSerialize()] : [])
-            + ($this->else !== null ? ['else' => $this->else->jsonSerialize()] : []);
+            + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : []);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Giann\Schematics;
 
 use Giann\Schematics\December2020\Generator as December2020Generator;
+use Giann\Schematics\Draft04\Generator as Draft04Generator;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\Exception\UnsupportedDraftException;
 use Giann\Trunk\Trunk;
@@ -33,7 +34,10 @@ class Generator
 
         switch ($draft) {
             case Draft::December2020:
+            case Draft::September2019:
                 return (new December2020Generator())->generateSchema($rawSchema);
+            case Draft::Draft04:
+                return (new Draft04Generator())->generateSchema($rawSchema);
             default:
                 throw new UnsupportedDraftException('Draft ' . $rawSchema['$schema']->stringValue() . ' is not supported');
         }

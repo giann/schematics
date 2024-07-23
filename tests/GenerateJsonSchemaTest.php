@@ -17,6 +17,7 @@ use Giann\Schematics\December2020\ObjectSchema;
 use Giann\Schematics\December2020\Property\Description;
 use Giann\Schematics\December2020\Schema;
 use Giann\Schematics\December2020\StringSchema;
+use Giann\Schematics\Draft04\Schema as Draft04Schema;
 
 enum Sex: string
 {
@@ -264,5 +265,26 @@ final class GenerateJsonSchemaTest extends TestCase
         } catch (InvalidSchemaException $e) {
             $this->assertEquals('Invalid or misplaced keywords at #/properties/list: items', $e->getMessage());
         }
+    }
+
+    public function testDraft04Schema(): void
+    {
+        $schema = [
+            '$schema' => Draft::Draft04->value,
+            'type' => 'object',
+            'properties' => [
+                'list' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'string'
+                    ]
+                ]
+            ]
+        ];
+        $ast = (new Generator)->generateSchema($schema);
+        $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
+
+        $this->assertInstanceOf(Draft04Schema::class, $reconstructed);
+        $this->assertEquals($schema, $reconstructed->jsonSerialize());
     }
 }

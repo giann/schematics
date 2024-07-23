@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Giann\Schematics\December2020;
+namespace Giann\Schematics\Draft04;
 
 use Attribute;
 use UnitEnum;
@@ -13,26 +13,20 @@ class StringSchema extends Schema
     /**
      * @param string|null $id
      * @param bool $isRoot
-     * @param string|null $anchor
      * @param string|null $ref
-     * @param array<string,Schema|CircularReference|null> $defs
+     * @param array<string,Schema|CircularReference|null> $definitions
      * @param string|null $title
      * @param string|null $description
-     * @param string|null $comment
      * @param mixed[]|null $examples
      * @param mixed $default
-     * @param boolean|null $deprecated
+
      * @param boolean|null $readOnly
      * @param boolean|null $writeOnly
-     * @param mixed $const
      * @param mixed[]|null $enum
      * @param Schema[]|null $allOf
      * @param Schema[]|null $oneOf
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
-     * @param Schema|null $if
-     * @param Schema|null $then
-     * @param Schema|null $else
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
      * @param Format|null $format Predefined format to which the string must conform
@@ -41,31 +35,24 @@ class StringSchema extends Schema
      * @param string|null $pattern A string instance is considered valid if the regular expression matches the instance successfully
      * @param ContentEncoding|null $contentEncoding If the instance value is a string, this property defines that the string SHOULD be interpreted as binary data and decoded using the encoding named by this property
      * @param string|null $contentMediaType If the instance is a string, this property indicates the media type of the contents of the string. If "contentEncoding" is present, this property describes the decoded string
-     * @param Schema|null $contentSchema If the instance is a string, and if "contentMediaType" is present, this property contains a schema which describes the structure of the string
      */
     public function __construct(
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
-        ?string $anchor = null,
         ?string $ref = null,
-        array $defs = [],
+        array $definitions = [],
         ?string $description = null,
-        ?string $comment = null,
         ?array $examples = null,
         $default = new NullConst(),
-        ?bool $deprecated = null,
+
         ?bool $readOnly = null,
         ?bool $writeOnly = null,
-        $const = null,
         ?array $enum = null,
         ?array $allOf = null,
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
-        ?Schema $if = null,
-        ?Schema $then = null,
-        ?Schema $else = null,
         ?string $enumPattern = null,
         ?string $enumClass = null,
 
@@ -75,24 +62,20 @@ class StringSchema extends Schema
         public ?string $pattern = null,
         public ?ContentEncoding $contentEncoding = null,
         public ?string $contentMediaType = null,
-        public ?Schema $contentSchema = null,
     ) {
         parent::__construct(
             [Type::String],
             isRoot: $isRoot,
             id: $id,
-            anchor: $anchor,
             ref: $ref,
-            defs: $defs,
+            definitions: $definitions,
             title: $title,
             description: $description,
-            comment: $comment,
             examples: $examples,
             default: $default,
-            deprecated: $deprecated,
+
             readOnly: $readOnly,
             writeOnly: $writeOnly,
-            const: $const,
             enum: $enum,
             enumPattern: $enumPattern,
             enumClass: $enumClass,
@@ -100,9 +83,6 @@ class StringSchema extends Schema
             oneOf: $oneOf,
             anyOf: $anyOf,
             not: $not,
-            if: $if,
-            then: $then,
-            else: $else,
         );
     }
 
@@ -116,7 +96,6 @@ class StringSchema extends Schema
             + ($this->maxLength !== null ? ['maxLength' => $this->maxLength] : [])
             + ($this->pattern !== null ? ['pattern' => $this->pattern] : [])
             + ($this->contentEncoding !== null ? ['contentEncoding' => $this->contentEncoding] : [])
-            + ($this->contentMediaType !== null ? ['contentMediaType' => $this->contentMediaType] : [])
-            + ($this->contentSchema !== null ? ['contentSchema' => $this->contentSchema->jsonSerialize()] : []);
+            + ($this->contentMediaType !== null ? ['contentMediaType' => $this->contentMediaType] : []);
     }
 }

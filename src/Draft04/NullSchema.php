@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Giann\Schematics\December2020;
+namespace Giann\Schematics\Draft04;
 
 use Attribute;
 
@@ -12,12 +12,10 @@ final class NullSchema extends Schema
     /**
      * @param string|null $id
      * @param bool $isRoot
-     * @param string|null $anchor
-     * @param array<string,Schema|CircularReference|null> $defs
+     * @param array<string,Schema|CircularReference|null> $definitions
      * @param string|null $title
      * @param string|null $description
-     * @param string|null $comment
-     * @param boolean|null $deprecated
+
      * @param boolean|null $readOnly
      * @param boolean|null $writeOnly
      */
@@ -25,11 +23,9 @@ final class NullSchema extends Schema
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
-        ?string $anchor = null,
-        array $defs = [],
+        array $definitions = [],
         ?string $description = null,
-        ?string $comment = null,
-        ?bool $deprecated = null,
+
         ?bool $readOnly = null,
         ?bool $writeOnly = null,
     ) {
@@ -37,12 +33,10 @@ final class NullSchema extends Schema
             [Type::Null],
             isRoot: $isRoot,
             id: $id,
-            anchor: $anchor,
-            defs: $defs,
+            definitions: $definitions,
             title: $title,
             description: $description,
-            comment: $comment,
-            deprecated: $deprecated,
+
             readOnly: $readOnly,
             writeOnly: $writeOnly,
         );

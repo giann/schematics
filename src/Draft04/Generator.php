@@ -2,19 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Giann\Schematics\December2020;
+namespace Giann\Schematics\Draft04;
 
-use Giann\Schematics\December2020\ArraySchema;
-use Giann\Schematics\December2020\BooleanSchema;
-use Giann\Schematics\December2020\ContentEncoding;
-use Giann\Schematics\December2020\Format;
-use Giann\Schematics\December2020\IntegerSchema;
-use Giann\Schematics\December2020\NullSchema;
-use Giann\Schematics\December2020\NumberSchema;
-use Giann\Schematics\December2020\ObjectSchema;
-use Giann\Schematics\December2020\Schema;
-use Giann\Schematics\December2020\StringSchema;
-use Giann\Schematics\December2020\Type;
+use Giann\Schematics\Draft04\ArraySchema;
+use Giann\Schematics\Draft04\BooleanSchema;
+use Giann\Schematics\Draft04\ContentEncoding;
+use Giann\Schematics\Draft04\Format;
+use Giann\Schematics\Draft04\NullSchema;
+use Giann\Schematics\Draft04\NumberSchema;
+use Giann\Schematics\Draft04\ObjectSchema;
+use Giann\Schematics\Draft04\Schema;
+use Giann\Schematics\Draft04\StringSchema;
+use Giann\Schematics\Draft04\Type;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\Exception\InvalidSchemaKeywordValueException;
 use Giann\Trunk\Trunk;
@@ -115,10 +114,6 @@ class Generator
                     $baseClass = StringSchema::class;
                     $this->buildStringKeywords($rawSchema, $path, $parameters, $keywords);
                     break;
-                case Type::Integer:
-                    $baseClass = IntegerSchema::class;
-                    $this->buildNumberKeywords($rawSchema, $path, $parameters, $keywords);
-                    break;
                 case Type::Number:
                     $baseClass = NumberSchema::class;
                     $this->buildNumberKeywords($rawSchema, $path, $parameters, $keywords);
@@ -215,11 +210,9 @@ class Generator
                     $keywords[$property] = true;
                     break;
                 case 'id':
-                case 'anchor':
                 case '$ref':
                 case 'title':
                 case 'description':
-                case '$comment':
                     if ($value->string() === null) {
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a string at ' . $path
@@ -233,7 +226,7 @@ class Generator
 
                     $keywords[$property] = true;
                     break;
-                case '$defs':
+                case 'definitions':
                     $rawDefs = $value->map();
 
                     if ($rawDefs === null) {
@@ -243,12 +236,12 @@ class Generator
                     }
 
                     $parameters[] = new Arg(
-                        name: new Identifier('defs'),
+                        name: new Identifier('definitions'),
                         value: new Array_(
                             array_map(
                                 fn ($key) => new ArrayItem(
                                     key: new String_($key),
-                                    value: $this->generateSchema($rawDefs[$key], $path . '/$defs/' . $key)
+                                    value: $this->generateSchema($rawDefs[$key], $path . '/$definitions/' . $key)
                                 ),
                                 array_keys($rawDefs),
                             ),
@@ -290,14 +283,12 @@ class Generator
                     $keywords[$property] = true;
                     break;
                 case 'default':
-                case 'const':
                     $parameters[] = new Arg(
                         name: new Identifier($property),
                         value: $this->phpValueToExpr($value->data)
                     );
                     $keywords[$property] = true;
                     break;
-                case 'deprecated':
                 case 'readOnly':
                 case 'writeOnly':
                     if ($value->bool() === null) {
@@ -338,9 +329,6 @@ class Generator
                     $keywords[$property] = true;
                     break;
                 case 'not':
-                case 'if':
-                case 'then':
-                case 'else':
                     if ($value->map() === null) {
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a Schema at ' . $path
@@ -449,20 +437,6 @@ class Generator
 
                     $keywords[$property] = true;
                     break;
-                case 'contentSchema':
-                    if ($value->map() === null) {
-                        throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema at ' . $path
-                        );
-                    }
-
-                    $parameters[] = new Arg(
-                        name: new Identifier($property),
-                        value: $this->generateSchema($value, $path . '/' . $property),
-                    );
-
-                    $keywords[$property] = true;
-                    break;
             }
         }
     }
@@ -520,8 +494,6 @@ class Generator
             // Generate parameters
             switch ($property) {
                 case 'properties':
-                case 'patternProperties':
-                case 'dependentSchemas':
                     $subSchemas = $value->map();
 
                     if ($subSchemas === null) {
@@ -545,6 +517,54 @@ class Generator
 
                     $keywords[$property] = true;
                     break;
+                case 'dependencies':
+                    $subSchemas = $value->map();
+
+                    if (empty($subSchemas)) {
+                        throw new InvalidSchemaKeywordValueException(
+                            '`' . $property . '` must be a non empty array<string,Schema|string[]> at ' . $path
+                        );
+                    }
+
+                    // Either string[]
+                    if ($subSchemas[array_keys($subSchemas)[0]]->string() !== null) {
+                        $parameters[] = new Arg(
+                            name: new Identifier($property),
+                            value: new Array_(
+                                array_map(
+                                    fn ($key) => new ArrayItem(
+                                        key: new String_($key),
+                                        value: new Array_(
+                                            array_map(
+                                                fn (Trunk $string) => new ArrayItem(
+                                                    new String_($string->stringValue())
+                                                ),
+                                                $subSchemas[$key]->arrayValue(),
+                                            )
+                                        )
+                                    ),
+                                    array_keys($subSchemas),
+                                ),
+                            ),
+                        );
+                    } else {
+                        // Or Schema
+                        $parameters[] = new Arg(
+                            name: new Identifier($property),
+                            value: new Array_(
+                                array_map(
+                                    fn ($key) => new ArrayItem(
+                                        key: new String_($key),
+                                        value: $this->generateSchema($subSchemas[$key], $path . '/' . $property . '/' . $key)
+                                    ),
+                                    array_keys($subSchemas),
+                                ),
+                            ),
+                        );
+                    }
+
+                    $keywords[$property] = true;
+                    break;
                 case 'additionalProperties':
                     if ($value->map() === null && ($value->bool() === null || $value->bool() === true)) {
                         throw new InvalidSchemaKeywordValueException(
@@ -557,21 +577,6 @@ class Generator
                         value: $value->bool() !== null
                             ? self::falseExpr()
                             : $this->generateSchema($value, $path . '/' . $property)
-                    );
-
-                    $keywords[$property] = true;
-                    break;
-                case 'unevaluatedProperties':
-                case 'propertyNames':
-                    if ($value->map() === null) {
-                        throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema at ' . $path
-                        );
-                    }
-
-                    $parameters[] = new Arg(
-                        name: new Identifier($property),
-                        value: $this->generateSchema($value, $path . '/' . $property),
                     );
 
                     $keywords[$property] = true;
@@ -618,31 +623,6 @@ class Generator
 
                     $keywords[$property] = true;
                     break;
-                case 'dependentRequired':
-                    if (
-                        $value->map() === null
-                        || !empty(array_filter(
-                            $value->mapValue(),
-                            fn ($content) => $content->list() === null
-                                || array_filter(
-                                    $content->listValue(),
-                                    fn (Trunk $el) => $el->string() === null
-                                )
-                        ))
-                    ) {
-                        throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a array<string,string[]> at ' . $path
-                        );
-                    }
-
-                    $parameters[$property] = $value->mapRawValue();
-                    $parameters[] = new Arg(
-                        name: new Identifier($property),
-                        value: $this->phpValueToExpr($value->mapRawValue())
-                    );
-
-                    $keywords[$property] = true;
-                    break;
             }
         }
     }
@@ -661,8 +641,6 @@ class Generator
             // Generate parameters
             switch ($property) {
                 case 'items':
-                case 'contains':
-                case 'unevaluatedItems':
                     if ($value->map() === null) {
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a Schema at ' . $path
@@ -698,8 +676,6 @@ class Generator
 
                     $keywords[$property] = true;
                     break;
-                case 'minContains':
-                case 'maxContains':
                 case 'minItems':
                 case 'maxItems':
                     $number = $value->int();

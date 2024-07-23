@@ -17,6 +17,7 @@ class BooleanSchema extends Schema
      * @param array<string,Schema|CircularReference|null> $defs
      * @param string|null $title
      * @param string|null $description
+     * @param string|null $comment
      * @param string[]|null $examples
      * @param mixed $default
      * @param boolean|null $deprecated
@@ -28,6 +29,9 @@ class BooleanSchema extends Schema
      * @param Schema[]|null $oneOf
      * @param Schema[]|null $anyOf
      * @param Schema|null $not
+     * @param Schema|null $if
+     * @param Schema|null $then
+     * @param Schema|null $else
      */
     public function __construct(
         bool $isRoot = false,
@@ -37,6 +41,7 @@ class BooleanSchema extends Schema
         ?string $ref = null,
         array $defs = [],
         ?string $description = null,
+        ?string $comment = null,
         ?array $examples = null,
         $default = new NullConst(),
         ?bool $deprecated = null,
@@ -48,6 +53,9 @@ class BooleanSchema extends Schema
         ?array $oneOf = null,
         ?array $anyOf = null,
         ?Schema $not = null,
+        ?Schema $if = null,
+        ?Schema $then = null,
+        ?Schema $else = null,
     ) {
         parent::__construct(
             [Type::Boolean],
@@ -58,6 +66,7 @@ class BooleanSchema extends Schema
             defs: $defs,
             title: $title,
             description: $description,
+            comment: $comment,
             examples: $examples,
             default: $default,
             deprecated: $deprecated,
@@ -69,6 +78,9 @@ class BooleanSchema extends Schema
             oneOf: $oneOf,
             anyOf: $anyOf,
             not: $not,
+            if: $if,
+            then: $then,
+            else: $else,
         );
     }
 }

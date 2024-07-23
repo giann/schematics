@@ -1,6 +1,10 @@
 # schematics
 
-Translates php classes to JSON Schema by annotating them with attributes. Supports from draft-04 to 2020-12.
+Translates php classes to JSON Schema by annotating them with attributes.
+
+## Supported Drafts
+
+Only commonly used drafts `draft-04` and `2020-12` are supported.
 
 ## Example
 
