@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Giann\Schematics\Draft04;
+namespace Giann\Schematics;
 
 use Attribute;
 

@@ -11,6 +11,7 @@ use Giann\Schematics\Draft04\Property\Property;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\ExcludedFromSchema;
 use Giann\Schematics\NotRequired;
+use Giann\Schematics\Renamed;
 use JsonSerializable;
 use ReflectionClass;
 use InvalidArgumentException;
