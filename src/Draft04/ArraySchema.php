@@ -11,6 +11,7 @@ use UnitEnum;
 class ArraySchema extends Schema
 {
     /**
+     * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
      * @param bool $isRoot
      * @param string|null $ref
@@ -34,6 +35,7 @@ class ArraySchema extends Schema
      * @param boolean|null $uniqueItems If this keyword has boolean value false, the instance validates successfully. If it has boolean value true, the instance validates successfully if all of its elements are unique
      */
     public function __construct(
+        ?string $schema = null,
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
@@ -61,6 +63,7 @@ class ArraySchema extends Schema
     ) {
         parent::__construct(
             [Type::Array],
+            schema: $schema,
             isRoot: $isRoot,
             id: $id,
             ref: $ref,

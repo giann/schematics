@@ -17,7 +17,14 @@ use Giann\Schematics\December2020\ObjectSchema;
 use Giann\Schematics\December2020\Property\Description;
 use Giann\Schematics\December2020\Schema;
 use Giann\Schematics\December2020\StringSchema;
+use Giann\Schematics\Draft04\ArraySchema as Draft04ArraySchema;
+use Giann\Schematics\Draft04\BooleanSchema as Draft04BooleanSchema;
+use Giann\Schematics\Draft04\Format as Draft04Format;
+use Giann\Schematics\Draft04\NumberSchema;
+use Giann\Schematics\Draft04\ObjectSchema as Draft04ObjectSchema;
+use Giann\Schematics\Draft04\Property\Description as PropertyDescription;
 use Giann\Schematics\Draft04\Schema as Draft04Schema;
+use Giann\Schematics\Draft04\StringSchema as Draft04StringSchema;
 
 enum Sex: string
 {
@@ -76,6 +83,54 @@ class Person implements JsonSerializable
     }
 }
 
+#[Draft04ObjectSchema()]
+class Person04 implements JsonSerializable
+{
+    public function __construct(
+        #[PropertyDescription('unique id of the person')]
+        public string $id,
+
+        #[Draft04ArraySchema(
+            items: new Draft04StringSchema(),
+        )]
+        public array $names,
+
+        #[NumberSchema(minimum: 0)]
+        public int $age,
+
+        public Sex $sex,
+
+        #[ExcludedFromSchema]
+        public string $ignoreMe,
+
+        // Inferred oneOf type
+        public string|int $height = 180,
+
+        // Inferred $ref to self
+        #[NotRequired]
+        public ?Person04 $father = null,
+    ) {
+    }
+
+    #[NumberSchema()]
+    public function getInheritedComputedProperty(): int
+    {
+        return 12;
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return [
+            'id' => $this->id,
+            'names' => $this->names,
+            'age' => $this->age,
+            'sex' => $this->sex->value,
+            'height' => $this->height,
+            'inheritedComputedProperty' => $this->getInheritedComputedProperty(),
+        ] + ($this->father !== null ?  ['father' => $this->father->jsonSerialize()] : []);
+    }
+}
+
 enum Power: string
 {
     case Fly = 'weeeee!';
@@ -112,6 +167,61 @@ class Hero extends Person implements JsonSerializable
     }
 
     #[BooleanSchema]
+    public function isOk(): bool
+    {
+        return true;
+    }
+
+    // Overriden getter should be ignored
+    public function getInheritedComputedProperty(): int
+    {
+        return 13;
+    }
+
+    public function getNotAProperty(): void
+    {
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return parent::jsonSerialize()
+            + [
+                'superName' => $this->superName,
+                'power' => $this->power,
+                'computed' => $this->getComputed(),
+                'ok' => $this->isOk(),
+            ];
+    }
+}
+
+#[Draft04ObjectSchema()]
+class Hero04 extends Person04 implements JsonSerializable
+{
+    public function __construct(
+        string $id,
+        array $names,
+        int $age,
+        Sex $sex,
+        string|int $height,
+
+        // Inferred string property
+        public string $superName,
+
+        #[Draft04StringSchema(enumClass: Power::class)]
+        public string $power,
+
+        ?Person04 $father = null,
+    ) {
+        parent::__construct($id, $names, $age, $sex, 'ignore me', $height, $father);
+    }
+
+    #[NumberSchema]
+    public function getComputed(): int
+    {
+        return 12;
+    }
+
+    #[Draft04BooleanSchema()]
     public function isOk(): bool
     {
         return true;
@@ -269,22 +379,102 @@ final class GenerateJsonSchemaTest extends TestCase
 
     public function testDraft04Schema(): void
     {
-        $schema = [
-            '$schema' => Draft::Draft04->value,
-            'type' => 'object',
-            'properties' => [
-                'list' => [
-                    'type' => 'array',
-                    'items' => [
+        $this->assertEquals(
+            [
+                '$schema' => Draft::Draft04->value,
+                'type' => 'object',
+                'properties' => [
+                    'superName' => [
                         'type' => 'string'
+                    ],
+                    'power' => [
+                        'type' => 'string',
+                        'enum' => [
+                            'weeeee!',
+                            'smash!',
+                            'hummmm!',
+                        ]
+                    ],
+                    'computed' => [
+                        'type' => 'number'
+                    ],
+                    'ok' => [
+                        'type' => 'boolean'
                     ]
-                ]
-            ]
-        ];
-        $ast = (new Generator)->generateSchema($schema);
+                ],
+                'allOf' => [
+                    [
+                        '$ref' => '#/definitions/Person04'
+                    ]
+                ],
+                'definitions' => [
+                    'Person04' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'id' => [
+                                'type' => 'string',
+                                'description' => 'unique id of the person'
+                            ],
+                            'names' => [
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'string'
+                                ]
+                            ],
+                            'age' => [
+                                'type' => 'number',
+                                'minimum' => 0
+                            ],
+                            'father' => [
+                                'oneOf' => [
+                                    [
+                                        'type' => 'null'
+                                    ],
+                                    [
+                                        '$ref' => '#/definitions/Person04'
+                                    ]
+                                ]
+                            ],
+                            'sex' => [
+                                'type' => 'string',
+                                'enum' => [
+                                    'male',
+                                    'female',
+                                    'other'
+                                ]
+                            ],
+                            'height' => [
+                                'default' => 180,
+                                'oneOf' => [
+                                    [
+                                        'type' => 'string'
+                                    ],
+                                    [
+                                        'type' => 'number'
+                                    ]
+                                ]
+                            ],
+                            'inheritedComputedProperty' => [
+                                'type' => 'number'
+                            ],
+                        ],
+                        'required' => [
+                            'id', 'names', 'age', 'sex', 'height', 'inheritedComputedProperty',
+                        ]
+                    ]
+                ],
+                'required' => [
+                    'superName', 'power', 'computed', 'ok',
+                ],
+            ],
+            Draft04Schema::classSchema(Hero04::class)->jsonSerialize()
+        );
+
+        // Generate annotation expression AST from json schema
+        $ast = (new Generator)->generateSchema(Draft04Schema::classSchema(Hero04::class)->jsonSerialize());
         $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
 
         $this->assertInstanceOf(Draft04Schema::class, $reconstructed);
-        $this->assertEquals($schema, $reconstructed->jsonSerialize());
+        $this->assertEquals(Draft04Schema::classSchema(Hero04::class)->jsonSerialize(), $reconstructed->jsonSerialize());
     }
 }

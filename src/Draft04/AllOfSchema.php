@@ -12,6 +12,7 @@ class AllOfSchema extends Schema
 {
     /**
      * @param Schema[] $schemas
+     * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
      * @param bool $isRoot
      * @param string|null $ref
@@ -32,6 +33,7 @@ class AllOfSchema extends Schema
      */
     public function __construct(
         array $schemas,
+        ?string $schema = null,
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
@@ -52,6 +54,7 @@ class AllOfSchema extends Schema
     ) {
         parent::__construct(
             isRoot: $isRoot,
+            schema: $schema,
             id: $id,
             ref: $ref,
             definitions: $definitions,

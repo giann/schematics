@@ -11,6 +11,7 @@ use UnitEnum;
 class ObjectSchema extends Schema
 {
     /**
+     * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
      * @param bool $isRoot
      * @param string|null $anchor
@@ -47,6 +48,7 @@ class ObjectSchema extends Schema
      * @param ?array<string,string[]> $dependentRequired Validation succeeds if, for each name that appears in both the instance and as a name within this keyword's value, every item in the corresponding array is also the name of a property in the instance
      */
     public function __construct(
+        ?string $schema = null,
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
@@ -85,6 +87,7 @@ class ObjectSchema extends Schema
     ) {
         parent::__construct(
             [Type::Object],
+            schema: $schema,
             isRoot: $isRoot,
             id: $id,
             anchor: $anchor,

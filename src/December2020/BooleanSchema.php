@@ -10,6 +10,7 @@ use Attribute;
 class BooleanSchema extends Schema
 {
     /**
+     * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
      * @param bool $isRoot
      * @param string|null $anchor
@@ -34,6 +35,7 @@ class BooleanSchema extends Schema
      * @param Schema|null $else
      */
     public function __construct(
+        ?string $schema = null,
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
@@ -59,6 +61,7 @@ class BooleanSchema extends Schema
     ) {
         parent::__construct(
             [Type::Boolean],
+            schema: $schema,
             isRoot: $isRoot,
             id: $id,
             anchor: $anchor,

@@ -11,6 +11,7 @@ use UnitEnum;
 class StringSchema extends Schema
 {
     /**
+     * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
      * @param bool $isRoot
      * @param string|null $ref
@@ -37,6 +38,7 @@ class StringSchema extends Schema
      * @param string|null $contentMediaType If the instance is a string, this property indicates the media type of the contents of the string. If "contentEncoding" is present, this property describes the decoded string
      */
     public function __construct(
+        ?string $schema = null,
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
@@ -65,6 +67,7 @@ class StringSchema extends Schema
     ) {
         parent::__construct(
             [Type::String],
+            schema: $schema,
             isRoot: $isRoot,
             id: $id,
             ref: $ref,

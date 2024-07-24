@@ -11,6 +11,7 @@ use UnitEnum;
 class ArraySchema extends Schema
 {
     /**
+     * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
      * @param bool $isRoot
      * @param string|null $anchor
@@ -44,6 +45,7 @@ class ArraySchema extends Schema
      * @param null|Schema $unevaluatedItems Applies to items not evaluated by "prefixItems", "items" or "contains"
      */
     public function __construct(
+        ?string $schema = null,
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
@@ -81,6 +83,7 @@ class ArraySchema extends Schema
     ) {
         parent::__construct(
             [Type::Array],
+            schema: $schema,
             isRoot: $isRoot,
             id: $id,
             anchor: $anchor,

@@ -48,6 +48,7 @@ class Schema implements JsonSerializable
 
     /**
      * @param Type[] $type
+     * @param string|null $schema Will be ignored if not root of the schema
      * @param bool $isRoot
      * @param string|null $id Defines a URI for the schema, and the base URI that other URI references within the schema are resolved against
      * @param string|null $ref Reference a schema, and provides the ability to validate recursive structures through self-reference
@@ -69,6 +70,7 @@ class Schema implements JsonSerializable
      */
     public function __construct(
         public array $type = [],
+        public ?string $schema = null,
         public bool $isRoot = false,
         public ?string $id = null,
         public ?string $ref = null,
@@ -117,7 +119,7 @@ class Schema implements JsonSerializable
             if ($ref == '#') {
                 $this->resolvedRef = '#';
             } else {
-                $this->resolvedRef = '#/$definitions/' . $ref;
+                $this->resolvedRef = '#/definitions/' . $ref;
 
                 if (!isset($root->definitions[$ref])) {
                     $root->definitions[$ref] = new CircularReference(); // Avoid circular ref resolving
@@ -312,7 +314,7 @@ class Schema implements JsonSerializable
             }
 
             $ref = new Schema(ref: $parent);
-            $ref->resolvedRef = '#/$definitions/' . $parent;
+            $ref->resolvedRef = '#/definitions/' . $parent;
             $schema->allOf = array_merge($schema->allOf ?? [], [$ref]);
         }
 
@@ -631,7 +633,7 @@ class Schema implements JsonSerializable
     public function jsonSerialize(): array
     {
         $types = array_map(fn (Type $element) => $element->value, $this->type);
-        return ($this->isRoot ? ['$schema' => self::$draft->value] : [])
+        return ($this->isRoot || $this->schema !== null ? ['$schema' => $this->schema ?? self::$draft->value] : [])
             + (!empty($types) ? ['type' => count($types) > 1 ? $types : $types[0]] : [])
             + ($this->id !== null ? ['id' => $this->id] : [])
             + ($this->resolvedRef !== null ? ['$ref' => $this->resolvedRef] : [])

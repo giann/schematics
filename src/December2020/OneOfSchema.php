@@ -12,6 +12,7 @@ class OneOfSchema extends Schema
 {
     /**
      * @param Schema[] $schemas
+     * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
      * @param bool $isRoot
      * @param string|null $anchor
@@ -38,6 +39,7 @@ class OneOfSchema extends Schema
      */
     public function __construct(
         array $schemas,
+        ?string $schema = null,
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
@@ -63,6 +65,7 @@ class OneOfSchema extends Schema
         ?string $enumClass = null,
     ) {
         parent::__construct(
+            schema: $schema,
             isRoot: $isRoot,
             id: $id,
             anchor: $anchor,

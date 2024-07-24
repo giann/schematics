@@ -11,6 +11,7 @@ use UnitEnum;
 class NumberSchema extends Schema
 {
     /**
+     * @param string|null $schema Will be ignored if not root of the schema
      * @param bool $isRoot
      * @param string|null $id
      * @param string|null $anchor
@@ -42,6 +43,7 @@ class NumberSchema extends Schema
      * @param int|float|null $exclusiveMaximum If the instance is a number, then the instance is valid only if it has a value strictly less than (not equal to) "exclusiveMaximum"
      */
     public function __construct(
+        ?string $schema = null,
         bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
@@ -75,6 +77,7 @@ class NumberSchema extends Schema
     ) {
         parent::__construct(
             [Type::Number],
+            schema: $schema,
             isRoot: $isRoot,
             id: $id,
             anchor: $anchor,
