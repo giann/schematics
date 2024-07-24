@@ -146,13 +146,6 @@ class Generator
             throw new InvalidSchemaException('Invalid or misplaced keywords at ' . $path . ': ' . implode(', ', $unprocessed));
         }
 
-        if ($path === '#') {
-            $parameters[] = new Arg(
-                name: new Identifier('isRoot'),
-                value: self::trueExpr(),
-            );
-        }
-
         return new New_(new FullyQualified($baseClass), $parameters);
     }
 
