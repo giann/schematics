@@ -16,7 +16,7 @@
   ],
   "require": {
     "php": "^8.0",
-    "giann/trunk": "^1.3",
+    "giann/trunk": "^1.5.1",
     "nikic/php-parser": "<=4.19.1"
   },
   "require-dev": {

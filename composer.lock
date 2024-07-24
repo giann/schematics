@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "60be18d49ebfa321f4ae15d9a6ba8f68",
+    "content-hash": "89ea04483645e73b6922e81eb1d12b49",
     "packages": [
         {
             "name": "giann/trunk",
-            "version": "1.3.0",
+            "version": "1.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/giann/trunk.git",
-                "reference": "3207c87aff8f6bb7219430b240a730e714868c5b"
+                "reference": "a8ff7c10d2c82f7826935eb9851b1aa19e75d7d1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/giann/trunk/zipball/3207c87aff8f6bb7219430b240a730e714868c5b",
-                "reference": "3207c87aff8f6bb7219430b240a730e714868c5b",
+                "url": "https://api.github.com/repos/giann/trunk/zipball/a8ff7c10d2c82f7826935eb9851b1aa19e75d7d1",
+                "reference": "a8ff7c10d2c82f7826935eb9851b1aa19e75d7d1",
                 "shasum": ""
             },
             "require": {
@@ -46,7 +46,7 @@
             "description": "A safe way to query data from a PHP array inspired by SwiftyJSON",
             "support": {
                 "issues": "https://github.com/giann/trunk/issues",
-                "source": "https://github.com/giann/trunk/tree/1.3.0"
+                "source": "https://github.com/giann/trunk/tree/1.5.1"
             },
             "time": "2022-06-15T12:22:54+00:00"
         },
