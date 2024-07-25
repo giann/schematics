@@ -17,63 +17,27 @@ use Giann\Schematics\December2020\StringSchema;
 use Giann\Schematics\December2020\Type;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\Exception\InvalidSchemaKeywordValueException;
+use Giann\Schematics\GeneratorHelper;
 use Giann\Trunk\Trunk;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\ArrayItem;
 use PhpParser\Node\Expr\ClassConstFetch;
-use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Identifier;
-use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Scalar\DNumber;
 use PhpParser\Node\Scalar\LNumber;
 use PhpParser\Node\Scalar\String_;
-use PhpParser\Node\Stmt\Expression;
-use PhpParser\Parser;
-use PhpParser\ParserFactory;
 
 class Generator
 {
-    private Parser $parser;
+    private GeneratorHelper $helper;
 
     public function __construct()
     {
-        $this->parser = (new ParserFactory)->createForNewestSupportedVersion();
-    }
-
-    private static function trueExpr(): Expr
-    {
-        return new ConstFetch(new Name('true'));
-    }
-
-    private static function falseExpr(): Expr
-    {
-        return new ConstFetch(new Name('false'));
-    }
-
-    /**
-     * @param mixed $value
-     * @throws InvalidSchemaException
-     * @return Expr
-     */
-    private function phpValueToExpr(mixed $value): Expr
-    {
-        $parsed = $this->parser->parse(
-            '<?php '
-                . var_export($value, true)
-                . ';'
-        ) ?? [];
-
-        if (count($parsed) == 1 && $parsed[0] instanceof Expression) {
-            /** @var Expression */
-            $exprStmt = $parsed[0];
-            return $exprStmt->expr;
-        }
-
-        throw new InvalidSchemaException();
+        $this->helper = new GeneratorHelper;
     }
 
     /**
@@ -265,7 +229,7 @@ class Generator
                         name: new Identifier('examples'),
                         value: new Array_(
                             [
-                                new ArrayItem($this->phpValueToExpr($value->data))
+                                new ArrayItem($this->helper->phpValueToExpr($value->data))
                             ]
                         )
                     );
@@ -284,7 +248,7 @@ class Generator
                         name: new Identifier($property),
                         value: new Array_(
                             array_map(
-                                fn ($value) => new ArrayItem($this->phpValueToExpr($value)),
+                                fn ($value) => new ArrayItem($this->helper->phpValueToExpr($value)),
                                 $value->listRawValue()
                             )
                         )
@@ -296,7 +260,7 @@ class Generator
                 case 'const':
                     $parameters[] = new Arg(
                         name: new Identifier($property),
-                        value: $this->phpValueToExpr($value->data)
+                        value: $this->helper->phpValueToExpr($value->data)
                     );
                     $keywords[$property] = true;
                     break;
@@ -311,7 +275,7 @@ class Generator
 
                     $parameters[] = new Arg(
                         name: new Identifier($property),
-                        value: $value->boolValue() ? self::trueExpr() : self::falseExpr(),
+                        value: $this->helper->boolExpr($value->boolValue()),
                     );
 
                     $keywords[$property] = true;
@@ -374,7 +338,7 @@ class Generator
      * @throws InvalidSchemaException
      * @return void
      */
-    private function buildStringKeywords(Trunk $rawSchema, string $path, array &$parameters, array &$keywords): void
+    public function buildStringKeywords(Trunk $rawSchema, string $path, array &$parameters, array &$keywords): void
     {
         foreach ($rawSchema->mapValue() as $property => $value) {
             // Generate parameters
@@ -478,7 +442,7 @@ class Generator
      * @throws InvalidSchemaException
      * @return void
      */
-    private function buildNumberKeywords(Trunk $rawSchema, string $path, array &$parameters, array &$keywords): void
+    public function buildNumberKeywords(Trunk $rawSchema, string $path, array &$parameters, array &$keywords): void
     {
         foreach ($rawSchema->mapValue() as $property => $value) {
             // Generate parameters
@@ -517,7 +481,7 @@ class Generator
      * @throws InvalidSchemaException
      * @return void
      */
-    private function buildObjectKeywords(Trunk $rawSchema, string $path, array &$parameters, array &$keywords): void
+    public function buildObjectKeywords(Trunk $rawSchema, string $path, array &$parameters, array &$keywords): void
     {
         foreach ($rawSchema->mapValue() as $property => $value) {
             // Generate parameters
@@ -558,7 +522,7 @@ class Generator
                     $parameters[] = new Arg(
                         name: new Identifier($property),
                         value: $value->bool() !== null
-                            ? self::falseExpr()
+                            ? $this->helper->falseExpr()
                             : $this->generateSchema($value, $path . '/' . $property)
                     );
 
@@ -641,7 +605,7 @@ class Generator
                     $parameters[$property] = $value->mapRawValue();
                     $parameters[] = new Arg(
                         name: new Identifier($property),
-                        value: $this->phpValueToExpr($value->mapRawValue())
+                        value: $this->helper->phpValueToExpr($value->mapRawValue())
                     );
 
                     $keywords[$property] = true;
@@ -658,7 +622,7 @@ class Generator
      * @throws InvalidSchemaException
      * @return void
      */
-    private function buildArrayKeywords(Trunk $rawSchema, string $path, array &$parameters, array &$keywords): void
+    public function buildArrayKeywords(Trunk $rawSchema, string $path, array &$parameters, array &$keywords): void
     {
         foreach ($rawSchema->mapValue() as $property => $value) {
             // Generate parameters
@@ -729,9 +693,7 @@ class Generator
 
                     $parameters[] = new Arg(
                         name: new Identifier($property),
-                        value: $value->boolValue()
-                            ? self::trueExpr()
-                            : self::falseExpr(),
+                        value: $this->helper->boolExpr($value->boolValue()),
                     );
 
                     $keywords[$property] = true;

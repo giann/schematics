@@ -56,8 +56,7 @@ class Schema implements JsonSerializable
      * @param string|null $title
      * @param string|null $description
      * @param mixed[]|null $examples
-     * @param mixed $default
- Indicates that applications should refrain from usage of the declared property
+     * @param mixed $default Indicates that applications should refrain from usage of the declared property
      * @param boolean|null $readOnly Indicates that the value of the instance is managed exclusively by the server or the owning authority, and attempts by a user agent to modify the value of this property are expected to be ignored or rejected by a server
      * @param boolean|null $writeOnly Indicates that the value is never present when the instance is retrieved from the owning authority
      * @param mixed[]|null $enum An instance validates successfully against this keyword if its value is equal to one of the elements in this keyword's array value
@@ -605,6 +604,35 @@ class Schema implements JsonSerializable
         }
 
         if ($typeReflection instanceof ReflectionUnionType) {
+            // if int|float or int|float|null -> NumberSchema or oneOf NumberSchema + NullSchema
+            $types = $typeReflection->getTypes();
+            if (
+                count($types) === 2
+                && $types[0] instanceof ReflectionNamedType
+                && $types[1] instanceof ReflectionNamedType
+                && ($types[0]->getName() === 'int' || $types[1]->getName() === 'int')
+                && ($types[0]->getName() === 'float' || $types[1]->getName() === 'float')
+            ) {
+                return new NumberSchema();
+            }
+
+            if (
+                count($types) === 3
+                && $types[0] instanceof ReflectionNamedType
+                && $types[1] instanceof ReflectionNamedType
+                && $types[2] instanceof ReflectionNamedType
+                && ($types[0]->getName() === 'int' || $types[1]->getName() === 'int' || $types[2]->getName() === 'int')
+                && ($types[0]->getName() === 'float' || $types[1]->getName() === 'float' || $types[2]->getName() === 'float')
+                && ($types[0]->getName() === 'null' || $types[1]->getName() === 'null' || $types[2]->getName() === 'null')
+            ) {
+                return new Schema(
+                    oneOf: [
+                        new NullSchema(),
+                        new NumberSchema()
+                    ]
+                );
+            }
+
             $oneOf = [];
             foreach ($typeReflection->getTypes() as $subTypeReflection) {
                 $oneOf[] = static::inferType($current, $root, $currentClassReflection, $subTypeReflection);

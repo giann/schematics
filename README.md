@@ -1,6 +1,6 @@
 # schematics
 
-Translates php classes to JSON Schema by annotating them with attributes.
+Translates PHP classes to JSON Schema and back.
 
 ## Supported Drafts
 
