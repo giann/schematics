@@ -21,6 +21,7 @@ use Giann\Schematics\December2020\StringSchema;
 use Giann\Schematics\Draft04\ArraySchema as Draft04ArraySchema;
 use Giann\Schematics\Draft04\BooleanSchema as Draft04BooleanSchema;
 use Giann\Schematics\Draft04\EntityGenerator as Draft04EntityGenerator;
+use Giann\Schematics\Draft04\IntegerSchema as Draft04IntegerSchema;
 use Giann\Schematics\Draft04\NumberSchema;
 use Giann\Schematics\Draft04\ObjectSchema as Draft04ObjectSchema;
 use Giann\Schematics\Draft04\Property\Description as PropertyDescription;
@@ -85,7 +86,7 @@ class Person implements JsonSerializable
     }
 }
 
-#[Draft04ObjectSchema()]
+#[Draft04ObjectSchema]
 class Person04 implements JsonSerializable
 {
     public function __construct(
@@ -97,7 +98,7 @@ class Person04 implements JsonSerializable
         )]
         public array $names,
 
-        #[NumberSchema(minimum: 0)]
+        #[Draft04IntegerSchema(minimum: 0)]
         public int $age,
 
         public Sex $sex,
@@ -114,7 +115,7 @@ class Person04 implements JsonSerializable
     ) {
     }
 
-    #[NumberSchema()]
+    #[Draft04IntegerSchema]
     public function getInheritedComputedProperty(): int
     {
         return 12;
@@ -196,7 +197,7 @@ class Hero extends Person implements JsonSerializable
     }
 }
 
-#[Draft04ObjectSchema()]
+#[Draft04ObjectSchema]
 class Hero04 extends Person04 implements JsonSerializable
 {
     public function __construct(
@@ -217,13 +218,13 @@ class Hero04 extends Person04 implements JsonSerializable
         parent::__construct($id, $names, $age, $sex, 'ignore me', $height, $father);
     }
 
-    #[NumberSchema]
+    #[Draft04IntegerSchema]
     public function getComputed(): int
     {
         return 12;
     }
 
-    #[Draft04BooleanSchema()]
+    #[Draft04BooleanSchema]
     public function isOk(): bool
     {
         return true;
@@ -422,7 +423,7 @@ final class GenerateJsonSchemaTest extends TestCase
                     ]
                 ],
                 'computed' => [
-                    'type' => 'number'
+                    'type' => 'integer'
                 ],
                 'ok' => [
                     'type' => 'boolean'
@@ -448,7 +449,7 @@ final class GenerateJsonSchemaTest extends TestCase
                             ]
                         ],
                         'age' => [
-                            'type' => 'number',
+                            'type' => 'integer',
                             'minimum' => 0
                         ],
                         'father' => [
@@ -476,12 +477,12 @@ final class GenerateJsonSchemaTest extends TestCase
                                     'type' => 'string'
                                 ],
                                 [
-                                    'type' => 'number'
+                                    'type' => 'integer'
                                 ]
                             ]
                         ],
                         'inheritedComputedProperty' => [
-                            'type' => 'number'
+                            'type' => 'integer'
                         ],
                     ],
                     'required' => [

@@ -436,6 +436,8 @@ class EntityGenerator
         switch ($type) {
             case 'string':
                 return new Identifier('string');
+            case 'integer':
+                return new Identifier('int');
             case 'boolean':
                 return new Identifier("bool");
             case 'number':
@@ -471,8 +473,19 @@ class EntityGenerator
 
                 break;
             case 'number':
-            case 'integer':
                 $name = NumberSchema::class;
+
+                $empty = [];
+                $this->generator->buildNumberKeywords(
+                    rawSchema: $schema,
+                    path: '#',
+                    parameters: $attributeArgs,
+                    keywords: $empty
+                );
+
+                break;
+            case 'integer':
+                $name = IntegerSchema::class;
 
                 $empty = [];
                 $this->generator->buildNumberKeywords(

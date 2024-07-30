@@ -82,6 +82,10 @@ class Generator
                     $baseClass = NumberSchema::class;
                     $this->buildNumberKeywords($rawSchema, $path, $parameters, $keywords);
                     break;
+                case Type::Integer:
+                    $baseClass = IntegerSchema::class;
+                    $this->buildNumberKeywords($rawSchema, $path, $parameters, $keywords);
+                    break;
                 case Type::Array:
                     $baseClass = ArraySchema::class;
                     $this->buildArrayKeywords($rawSchema, $path, $parameters, $keywords);

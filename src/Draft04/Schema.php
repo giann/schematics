@@ -531,6 +531,8 @@ class Schema implements JsonSerializable
                     $propertySchema = new StringSchema();
                     break;
                 case 'int':
+                    $propertySchema = new IntegerSchema();
+                    break;
                 case 'float':
                     $propertySchema = new NumberSchema();
                     break;
@@ -604,35 +606,6 @@ class Schema implements JsonSerializable
         }
 
         if ($typeReflection instanceof ReflectionUnionType) {
-            // if int|float or int|float|null -> NumberSchema or oneOf NumberSchema + NullSchema
-            $types = $typeReflection->getTypes();
-            if (
-                count($types) === 2
-                && $types[0] instanceof ReflectionNamedType
-                && $types[1] instanceof ReflectionNamedType
-                && ($types[0]->getName() === 'int' || $types[1]->getName() === 'int')
-                && ($types[0]->getName() === 'float' || $types[1]->getName() === 'float')
-            ) {
-                return new NumberSchema();
-            }
-
-            if (
-                count($types) === 3
-                && $types[0] instanceof ReflectionNamedType
-                && $types[1] instanceof ReflectionNamedType
-                && $types[2] instanceof ReflectionNamedType
-                && ($types[0]->getName() === 'int' || $types[1]->getName() === 'int' || $types[2]->getName() === 'int')
-                && ($types[0]->getName() === 'float' || $types[1]->getName() === 'float' || $types[2]->getName() === 'float')
-                && ($types[0]->getName() === 'null' || $types[1]->getName() === 'null' || $types[2]->getName() === 'null')
-            ) {
-                return new Schema(
-                    oneOf: [
-                        new NullSchema(),
-                        new NumberSchema()
-                    ]
-                );
-            }
-
             $oneOf = [];
             foreach ($typeReflection->getTypes() as $subTypeReflection) {
                 $oneOf[] = static::inferType($current, $root, $currentClassReflection, $subTypeReflection);
