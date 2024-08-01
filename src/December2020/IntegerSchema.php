@@ -13,7 +13,6 @@ class IntegerSchema extends Schema
     /**
      * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
-     * @param bool $isRoot
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
@@ -44,7 +43,6 @@ class IntegerSchema extends Schema
      */
     public function __construct(
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -78,7 +76,6 @@ class IntegerSchema extends Schema
         parent::__construct(
             [Type::Integer],
             schema: $schema,
-            isRoot: $isRoot,
             id: $id,
             anchor: $anchor,
             ref: $ref,

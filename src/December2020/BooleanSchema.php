@@ -12,7 +12,6 @@ class BooleanSchema extends Schema
     /**
      * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
-     * @param bool $isRoot
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
@@ -36,7 +35,6 @@ class BooleanSchema extends Schema
      */
     public function __construct(
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -62,7 +60,6 @@ class BooleanSchema extends Schema
         parent::__construct(
             [Type::Boolean],
             schema: $schema,
-            isRoot: $isRoot,
             id: $id,
             anchor: $anchor,
             ref: $ref,

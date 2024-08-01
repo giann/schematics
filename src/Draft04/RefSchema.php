@@ -13,7 +13,6 @@ class RefSchema extends Schema
     /**
      * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
-     * @param bool $isRoot
      * @param string $ref
      * @param array<string,Schema|CircularReference|null> $definitions
      * @param string|null $title
@@ -34,7 +33,6 @@ class RefSchema extends Schema
     public function __construct(
         string $ref,
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         array $definitions = [],
@@ -55,7 +53,6 @@ class RefSchema extends Schema
         parent::__construct(
             schema: $schema,
             ref: $ref,
-            isRoot: $isRoot,
             id: $id,
             definitions: $definitions,
             title: $title,

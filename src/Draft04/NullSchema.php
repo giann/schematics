@@ -12,7 +12,6 @@ final class NullSchema extends Schema
     /**
      * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
-     * @param bool $isRoot
      * @param array<string,Schema|CircularReference|null> $definitions
      * @param string|null $title
      * @param string|null $description
@@ -22,7 +21,6 @@ final class NullSchema extends Schema
      */
     public function __construct(
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         array $definitions = [],
@@ -34,7 +32,6 @@ final class NullSchema extends Schema
         parent::__construct(
             [Type::Null],
             schema: $schema,
-            isRoot: $isRoot,
             id: $id,
             definitions: $definitions,
             title: $title,

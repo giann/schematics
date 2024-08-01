@@ -13,7 +13,6 @@ class StringSchema extends Schema
     /**
      * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
-     * @param bool $isRoot
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
@@ -46,7 +45,6 @@ class StringSchema extends Schema
      */
     public function __construct(
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -82,7 +80,6 @@ class StringSchema extends Schema
         parent::__construct(
             [Type::String],
             schema: $schema,
-            isRoot: $isRoot,
             id: $id,
             anchor: $anchor,
             ref: $ref,

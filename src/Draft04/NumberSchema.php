@@ -12,7 +12,6 @@ class NumberSchema extends Schema
 {
     /**
      * @param string|null $schema Will be ignored if not root of the schema
-     * @param bool $isRoot
      * @param string|null $id
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $definitions
@@ -38,7 +37,6 @@ class NumberSchema extends Schema
      */
     public function __construct(
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         ?string $ref = null,
@@ -66,7 +64,6 @@ class NumberSchema extends Schema
         parent::__construct(
             [Type::Number],
             schema: $schema,
-            isRoot: $isRoot,
             id: $id,
             ref: $ref,
             definitions: $definitions,

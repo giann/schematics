@@ -44,12 +44,13 @@ class Schema implements JsonSerializable
     // A boolean is a valid schema: true validates anything and false nothing
     private ?bool $unilateral = null;
 
+    protected bool $isRoot = true;
+
     public static Draft $draft = Draft::Draft04;
 
     /**
      * @param Type[] $type
      * @param string|null $schema Will be ignored if not root of the schema
-     * @param bool $isRoot
      * @param string|null $id Defines a URI for the schema, and the base URI that other URI references within the schema are resolved against
      * @param string|null $ref Reference a schema, and provides the ability to validate recursive structures through self-reference
      * @param array<string,Schema|CircularReference|null> $definitions Reserves a location for schema authors to inline re-usable JSON Schemas into a more general schema
@@ -70,7 +71,6 @@ class Schema implements JsonSerializable
     public function __construct(
         public array $type = [],
         public ?string $schema = null,
-        public bool $isRoot = false,
         public ?string $id = null,
         public ?string $ref = null,
         public array $definitions = [],
@@ -634,6 +634,9 @@ class Schema implements JsonSerializable
     public function jsonSerialize(): array
     {
         $types = array_map(fn (Type $element) => $element->value, $this->type);
+        if ($this->not !== null) {
+            $this->not->isRoot = false;
+        }
         return ($this->isRoot || $this->schema !== null ? ['$schema' => $this->schema ?? self::$draft->value] : [])
             + (!empty($types) ? ['type' => count($types) > 1 ? $types : $types[0]] : [])
             + ($this->id !== null ? ['id' => $this->id] : [])
@@ -641,7 +644,14 @@ class Schema implements JsonSerializable
             + ($this->resolvedRef === null && $this->ref !== null ? ['$ref' => $this->ref] : [])
             + (!empty($this->definitions) ? [
                 'definitions' => array_map(
-                    fn ($el) => $el instanceof Schema ? $el->jsonSerialize() : $el,
+                    function ($el) {
+                        if ($el instanceof Schema) {
+                            $el->isRoot = false;
+                            return $el->jsonSerialize();
+                        }
+
+                        return $el;
+                    },
                     $this->definitions
                 )
             ] : [])
@@ -652,9 +662,24 @@ class Schema implements JsonSerializable
             + ($this->readOnly !== null ? ['readOnly' => $this->readOnly] : [])
             + ($this->writeOnly !== null ? ['writeOnly' => $this->writeOnly] : [])
             + ($this->enum !== null ? ['enum' => $this->enum] : [])
-            + ($this->allOf !== null ? ['allOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->allOf)] : [])
-            + ($this->oneOf !== null ? ['oneOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->oneOf)] : [])
-            + ($this->anyOf !== null ? ['anyOf' => array_map(fn (Schema $element) => $element->jsonSerialize(), $this->anyOf)] : [])
+            + ($this->allOf !== null ? [
+                'allOf' => array_map(function (Schema $element) {
+                    $element->isRoot = false;
+                    return $element->jsonSerialize();
+                }, $this->allOf)
+            ] : [])
+            + ($this->oneOf !== null ? [
+                'oneOf' => array_map(function (Schema $element) {
+                    $element->isRoot = false;
+                    return $element->jsonSerialize();
+                }, $this->oneOf)
+            ] : [])
+            + ($this->anyOf !== null ? [
+                'anyOf' => array_map(function (Schema $element) {
+                    $element->isRoot = false;
+                    return $element->jsonSerialize();
+                }, $this->anyOf)
+            ] : [])
             + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : []);
     }
 }

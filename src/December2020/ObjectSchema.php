@@ -13,7 +13,6 @@ class ObjectSchema extends Schema
     /**
      * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
-     * @param bool $isRoot
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
@@ -49,7 +48,6 @@ class ObjectSchema extends Schema
      */
     public function __construct(
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -88,7 +86,6 @@ class ObjectSchema extends Schema
         parent::__construct(
             [Type::Object],
             schema: $schema,
-            isRoot: $isRoot,
             id: $id,
             anchor: $anchor,
             ref: $ref,
@@ -149,6 +146,7 @@ class ObjectSchema extends Schema
         $properties = null;
         if ($this->properties !== null) {
             foreach ($this->properties as $name => $property) {
+                $property->isRoot = false;
                 $properties[$name] = $property->jsonSerialize();
             }
         }
@@ -160,6 +158,7 @@ class ObjectSchema extends Schema
         $patternProperties = null;
         if ($this->patternProperties !== null) {
             foreach ($this->patternProperties as $name => $property) {
+                $property->isRoot = false;
                 $patternProperties[$name] = $property->jsonSerialize();
             }
         }
@@ -171,12 +170,17 @@ class ObjectSchema extends Schema
         $dependentSchemas = null;
         if ($this->dependentSchemas !== null) {
             foreach ($this->dependentSchemas as $name => $property) {
+                $property->isRoot = false;
                 $dependentSchemas[$name] = $property->jsonSerialize();
             }
         }
 
         if (!empty($dependentSchemas)) {
             $serialized['dependentSchemas'] = $dependentSchemas;
+        }
+
+        if ($this->propertyNames !== null) {
+            $this->propertyNames->isRoot = false;
         }
 
         return $serialized

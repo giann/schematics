@@ -13,7 +13,6 @@ class ArraySchema extends Schema
     /**
      * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
-     * @param bool $isRoot
      * @param string|null $anchor
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $defs
@@ -46,7 +45,6 @@ class ArraySchema extends Schema
      */
     public function __construct(
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         ?string $anchor = null,
@@ -84,7 +82,6 @@ class ArraySchema extends Schema
         parent::__construct(
             [Type::Array],
             schema: $schema,
-            isRoot: $isRoot,
             id: $id,
             anchor: $anchor,
             ref: $ref,
@@ -134,9 +131,29 @@ class ArraySchema extends Schema
     {
         $serialized = parent::jsonSerialize();
 
+        if ($this->items !== null) {
+            $this->items->isRoot = false;
+        }
+
+        if ($this->contains !== null) {
+            $this->contains->isRoot = false;
+        }
+
+        if ($this->unevaluatedItems !== null) {
+            $this->unevaluatedItems->isRoot = false;
+        }
+
         return $serialized
             + ($this->items !== null ? ['items' => $this->items->jsonSerialize()] : [])
-            + ($this->prefixItems !== null ? ['prefixItems' => $this->prefixItems] : [])
+            + ($this->prefixItems !== null ? [
+                'prefixItems' => array_map(
+                    function (Schema $element) {
+                        $element->isRoot = false;
+                        return $element->jsonSerialize();
+                    },
+                    $this->prefixItems
+                )
+            ] : [])
             + ($this->contains !== null ? ['contains' => $this->contains->jsonSerialize()] : [])
             + ($this->minContains !== null ? ['minContains' => $this->minContains] : [])
             + ($this->maxContains !== null ? ['maxContains' => $this->maxContains] : [])

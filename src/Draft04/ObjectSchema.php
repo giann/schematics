@@ -13,7 +13,6 @@ class ObjectSchema extends Schema
     /**
      * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
-     * @param bool $isRoot
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $definitions
      * @param string|null $title
@@ -40,7 +39,6 @@ class ObjectSchema extends Schema
      */
     public function __construct(
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         ?string $ref = null,
@@ -70,7 +68,6 @@ class ObjectSchema extends Schema
         parent::__construct(
             [Type::Object],
             schema: $schema,
-            isRoot: $isRoot,
             id: $id,
             ref: $ref,
             definitions: $definitions,
@@ -117,6 +114,7 @@ class ObjectSchema extends Schema
         $properties = null;
         if ($this->properties !== null) {
             foreach ($this->properties as $name => $property) {
+                $property->isRoot = false;
                 $properties[$name] = $property->jsonSerialize();
             }
         }
@@ -128,6 +126,7 @@ class ObjectSchema extends Schema
         $patternProperties = null;
         if ($this->patternProperties !== null) {
             foreach ($this->patternProperties as $name => $property) {
+                $property->isRoot = false;
                 $patternProperties[$name] = $property->jsonSerialize();
             }
         }
@@ -139,11 +138,19 @@ class ObjectSchema extends Schema
         $dependencies = null;
         if (!empty($this->dependencies)) {
             $dependencies = $this->dependencies[array_keys($this->dependencies)[0]] instanceof Schema
-                ? array_map(function ($dep) {
-                    assert($dep instanceof Schema);
-                    return $dep->jsonSerialize();
-                }, $this->dependencies)
+                ? array_map(
+                    function ($dep) {
+                        assert($dep instanceof Schema);
+                        $dep->isRoot = false;
+                        return $dep->jsonSerialize();
+                    },
+                    $this->dependencies
+                )
                 : $this->dependencies;
+        }
+
+        if ($this->additionalProperties instanceof Schema) {
+            $this->additionalProperties->isRoot = false;
         }
 
         return $serialized

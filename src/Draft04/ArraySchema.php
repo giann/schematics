@@ -13,7 +13,6 @@ class ArraySchema extends Schema
     /**
      * @param string|null $schema Will be ignored if not root of the schema
      * @param string|null $id
-     * @param bool $isRoot
      * @param string|null $ref
      * @param array<string,Schema|CircularReference|null> $definitions
      * @param string|null $title
@@ -36,7 +35,6 @@ class ArraySchema extends Schema
      */
     public function __construct(
         ?string $schema = null,
-        bool $isRoot = false,
         ?string $title = null,
         ?string $id = null,
         ?string $ref = null,
@@ -64,7 +62,6 @@ class ArraySchema extends Schema
         parent::__construct(
             [Type::Array],
             schema: $schema,
-            isRoot: $isRoot,
             id: $id,
             ref: $ref,
             definitions: $definitions,
@@ -104,9 +101,21 @@ class ArraySchema extends Schema
     {
         $serialized = parent::jsonSerialize();
 
+        if ($this->items !== null) {
+            $this->items->isRoot = false;
+        }
+
         return $serialized
             + ($this->items !== null ? ['items' => $this->items->jsonSerialize()] : [])
-            + ($this->prefixItems !== null ? ['prefixItems' => $this->prefixItems] : [])
+            + ($this->prefixItems !== null ? [
+                'prefixItems' => array_map(
+                    function (Schema $element) {
+                        $element->isRoot = false;
+                        return $element->jsonSerialize();
+                    },
+                    $this->prefixItems
+                )
+            ] : [])
             + ($this->uniqueItems !== null ? ['uniqueItems' => $this->uniqueItems] : []);
     }
 }
