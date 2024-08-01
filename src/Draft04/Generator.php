@@ -131,13 +131,6 @@ class Generator
             // Generate parameters
             switch ($property) {
                 case '$schema':
-                    if ($path === '#') {
-                        $parameters[] = new Arg(
-                            name: new Identifier('schema'),
-                            value: new String_($value->stringValue())
-                        );
-                    }
-
                     $keywords[$property] = true;
                     break;
                 case 'type':
