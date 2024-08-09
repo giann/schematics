@@ -23,9 +23,6 @@ class ArraySchema extends Schema
      * @param boolean|null $readOnly
      * @param boolean|null $writeOnly
      * @param mixed[]|null $enum
-     * @param Schema[]|null $allOf
-     * @param Schema[]|null $oneOf
-     * @param Schema[]|null $anyOf
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
@@ -46,10 +43,6 @@ class ArraySchema extends Schema
         ?bool $readOnly = null,
         ?bool $writeOnly = null,
         ?array $enum = null,
-        ?array $allOf = null,
-        ?array $oneOf = null,
-        ?array $anyOf = null,
-        ?Schema $not = null,
         ?string $enumPattern = null,
         ?string $enumClass = null,
 
@@ -75,10 +68,6 @@ class ArraySchema extends Schema
             enum: $enum,
             enumPattern: $enumPattern,
             enumClass: $enumClass,
-            allOf: $allOf,
-            oneOf: $oneOf,
-            anyOf: $anyOf,
-            not: $not,
         );
     }
 
