@@ -116,6 +116,8 @@ class ArraySchema extends Schema
                     $this->prefixItems
                 )
             ] : [])
-            + ($this->uniqueItems !== null ? ['uniqueItems' => $this->uniqueItems] : []);
+            + ($this->uniqueItems !== null ? ['uniqueItems' => $this->uniqueItems] : [])
+            + ($this->minItems !== null ? ['minItems' => $this->minItems] : [])
+            + ($this->maxItems !== null ? ['maxItems' => $this->maxItems] : []);
     }
 }
