@@ -158,6 +158,8 @@ class ArraySchema extends Schema
             + ($this->minContains !== null ? ['minContains' => $this->minContains] : [])
             + ($this->maxContains !== null ? ['maxContains' => $this->maxContains] : [])
             + ($this->uniqueItems !== null ? ['uniqueItems' => $this->uniqueItems] : [])
-            + ($this->unevaluatedItems !== null ? ['unevaluatedItems' => $this->unevaluatedItems->jsonSerialize()] : []);
+            + ($this->unevaluatedItems !== null ? ['unevaluatedItems' => $this->unevaluatedItems->jsonSerialize()] : [])
+            + ($this->minItems !== null ? ['minItems' => $this->minItems] : [])
+            + ($this->maxItems !== null ? ['maxItems' => $this->maxItems] : []);
     }
 }
