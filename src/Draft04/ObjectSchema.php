@@ -23,10 +23,6 @@ class ObjectSchema extends Schema
      * @param boolean|null $readOnly
      * @param boolean|null $writeOnly
      * @param mixed[]|null $enum
-     * @param Schema[]|null $allOf
-     * @param Schema[]|null $oneOf
-     * @param Schema[]|null $anyOf
-     * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
      * @param array<string,Schema>|null $properties Validation succeeds if, for each name that appears in both the instance and as a name within this keyword's value, the child instance for that name successfully validates against the corresponding schema
@@ -50,10 +46,6 @@ class ObjectSchema extends Schema
         ?bool $readOnly = null,
         ?bool $writeOnly = null,
         ?array $enum = null,
-        ?array $allOf = null,
-        ?array $oneOf = null,
-        ?array $anyOf = null,
-        ?Schema $not = null,
         ?string $enumPattern = null,
         ?string $enumClass = null,
 
@@ -79,10 +71,6 @@ class ObjectSchema extends Schema
             readOnly: $readOnly,
             writeOnly: $writeOnly,
             enum: $enum,
-            allOf: $allOf,
-            oneOf: $oneOf,
-            anyOf: $anyOf,
-            not: $not,
             enumPattern: $enumPattern,
             enumClass: $enumClass,
         );

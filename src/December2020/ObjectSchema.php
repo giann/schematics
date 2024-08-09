@@ -26,10 +26,6 @@ class ObjectSchema extends Schema
      * @param boolean|null $writeOnly
      * @param mixed $const
      * @param mixed[]|null $enum
-     * @param Schema[]|null $allOf
-     * @param Schema[]|null $oneOf
-     * @param Schema[]|null $anyOf
-     * @param Schema|null $not
      * @param Schema|null $if
      * @param Schema|null $then
      * @param Schema|null $else
@@ -62,10 +58,6 @@ class ObjectSchema extends Schema
         ?bool $writeOnly = null,
         $const = null,
         ?array $enum = null,
-        ?array $allOf = null,
-        ?array $oneOf = null,
-        ?array $anyOf = null,
-        ?Schema $not = null,
         ?Schema $if = null,
         ?Schema $then = null,
         ?Schema $else = null,
@@ -100,10 +92,6 @@ class ObjectSchema extends Schema
             writeOnly: $writeOnly,
             const: $const,
             enum: $enum,
-            allOf: $allOf,
-            oneOf: $oneOf,
-            anyOf: $anyOf,
-            not: $not,
             if: $if,
             then: $then,
             else: $else,
