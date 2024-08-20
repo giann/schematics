@@ -27,7 +27,7 @@ class Generator
 
         $draft = Draft::December2020;
         try {
-            $draft = Draft::from($rawSchema['$schema']->string() ?? Draft::December2020->value);
+            $draft = Draft::from(trim($rawSchema['$schema']->string() ?? Draft::December2020->value, '#'));
         } catch (ValueError $e) {
             throw new UnsupportedDraftException('Draft ' . $rawSchema['$schema']->stringValue() . ' is not supported');
         }
