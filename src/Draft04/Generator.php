@@ -204,7 +204,7 @@ class Generator
                         value: new Array_(
                             array_map(
                                 fn ($key) => new ArrayItem(
-                                    key: new String_($key),
+                                    key: new String_((string)$key),
                                     value: $this->generateSchema($rawDefs[$key], $path . '/$definitions/' . $key)
                                 ),
                                 array_keys($rawDefs),
@@ -471,7 +471,7 @@ class Generator
                         value: new Array_(
                             array_map(
                                 fn ($key) => new ArrayItem(
-                                    key: new String_($key),
+                                    key: new String_((string)$key),
                                     value: $this->generateSchema($subSchemas[$key], $path . '/' . $property . '/' . $key)
                                 ),
                                 array_keys($subSchemas),
@@ -497,7 +497,7 @@ class Generator
                             value: new Array_(
                                 array_map(
                                     fn ($key) => new ArrayItem(
-                                        key: new String_($key),
+                                        key: new String_((string)$key),
                                         value: new Array_(
                                             array_map(
                                                 fn (Trunk $string) => new ArrayItem(
@@ -518,7 +518,7 @@ class Generator
                             value: new Array_(
                                 array_map(
                                     fn ($key) => new ArrayItem(
-                                        key: new String_($key),
+                                        key: new String_((string)$key),
                                         value: $this->generateSchema($subSchemas[$key], $path . '/' . $property . '/' . $key)
                                     ),
                                     array_keys($subSchemas),
