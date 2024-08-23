@@ -457,6 +457,7 @@ class Generator
         foreach ($rawSchema->mapValue() as $property => $value) {
             // Generate parameters
             switch ($property) {
+                case 'patternProperties':
                 case 'properties':
                     $subSchemas = $value->map();
 
