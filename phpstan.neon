@@ -6,6 +6,15 @@ parameters:
     excludePaths:
         - tests
         - vendor
+    ignoreErrors:
+        -
+            message: '#Parameter \#\d+ \$items of class PhpParser\\Node\\Expr\\Array_ constructor expects array<PhpParser\\Node\\ArrayItem>, array<.*PhpParser\\Node\\Expr\\ArrayItem.*> given\.#'
+            identifier: argument.type
+            paths:
+                - src/December2020/EntityGenerator.php
+                - src/December2020/Generator.php
+                - src/Draft04/EntityGenerator.php
+                - src/Draft04/Generator.php
 
     fileExtensions:
         - php
