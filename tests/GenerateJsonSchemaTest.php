@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Giann\Schematics\December2020\NumberSchema;
+use Giann\Schematics\Exception\InvalidSchemaTypeException;
 use PHPUnit\Framework\TestCase;
 use PhpParser\PrettyPrinter;
 use Giann\Schematics\December2020\ArraySchema;
@@ -22,7 +24,7 @@ use Giann\Schematics\Draft04\ArraySchema as Draft04ArraySchema;
 use Giann\Schematics\Draft04\BooleanSchema as Draft04BooleanSchema;
 use Giann\Schematics\Draft04\EntityGenerator as Draft04EntityGenerator;
 use Giann\Schematics\Draft04\IntegerSchema as Draft04IntegerSchema;
-use Giann\Schematics\Draft04\NumberSchema;
+use Giann\Schematics\Draft04\NumberSchema as Draft04NumberSchema;
 use Giann\Schematics\Draft04\ObjectSchema as Draft04ObjectSchema;
 use Giann\Schematics\Draft04\Property\Description as PropertyDescription;
 use Giann\Schematics\Draft04\Schema as Draft04Schema;
@@ -382,6 +384,92 @@ final class GenerateJsonSchemaTest extends TestCase
         );
     }
 
+    public function testInvalidInheritanceTypeSchema(): void
+    {
+        $ast = (new Generator)->generateSchema(
+            [
+                '$schema' => Draft::December2020->value,
+                'type' => 'object',
+                'oneOf' => [
+                    [
+                        'type' => 'array',
+                        'maxItems' => 0,
+                    ],
+                    [
+                        'type' => 'object',
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                            'interest' => ['type' => 'number'],
+                        ],
+                        'additionalProperties' => false,
+                        'required' => ['interest'],
+                    ]
+                ]
+            ]
+        );
+
+        $this->expectException(InvalidSchemaTypeException::class);
+        $this->expectExceptionMessage('Property oneOf/0 has an inconsistent type from its parent, expecting type [ object ] but got type [ array ]');
+        eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
+    }
+
+    public function testValidInheritanceTypeSchema(): void
+    {
+        $ast = (new Generator)->generateSchema(
+            [
+                '$schema' => Draft::December2020->value,
+                'type' => 'number',
+                'oneOf' => [
+                    [
+                        'multipleOf' => 5,
+                    ],
+                    [
+                        'multipleOf' => 3,
+                    ]
+                ]
+            ]
+        );
+
+        $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
+        $this->assertInstanceOf(NumberSchema::class, $reconstructed);
+        $this->assertNotNull($reconstructed->oneOf);
+        foreach ($reconstructed->oneOf as $definition) {
+            $this->assertInstanceOf(NumberSchema::class, $definition);
+        }
+
+        $ast = (new Generator)->generateSchema(
+            [
+                '$schema' => Draft::December2020->value,
+                'type' => 'object',
+                'oneOf' => [
+                    [
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                            'benefit' => ['type' => 'number'],
+                        ],
+                        'additionalProperties' => false,
+                        'required' => ['interest'],
+                    ],
+                    [
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                            'interest' => ['type' => 'number'],
+                        ],
+                        'additionalProperties' => false,
+                        'required' => ['interest'],
+                    ]
+                ]
+            ]
+        );
+
+        $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
+        $this->assertInstanceOf(ObjectSchema::class, $reconstructed);
+        $this->assertNotNull($reconstructed->oneOf);
+        foreach ($reconstructed->oneOf as $definition) {
+            $this->assertInstanceOf(ObjectSchema::class, $definition);
+        }
+    }
+
     public function testInvalidSchema(): void
     {
         try {
@@ -529,5 +617,91 @@ final class GenerateJsonSchemaTest extends TestCase
                 true
             ),
         );
+    }
+
+    public function testDraft04InvalidInheritanceTypeSchema(): void
+    {
+        $ast = (new Generator)->generateSchema(
+            [
+                '$schema' => Draft::Draft04->value,
+                'type' => 'object',
+                'oneOf' => [
+                    [
+                        'type' => 'array',
+                        'maxItems' => 0,
+                    ],
+                    [
+                        'type' => 'object',
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                            'interest' => ['type' => 'number'],
+                        ],
+                        'additionalProperties' => false,
+                        'required' => ['interest'],
+                    ]
+                ]
+            ]
+        );
+
+        $this->expectException(InvalidSchemaTypeException::class);
+        $this->expectExceptionMessage('Property oneOf/0 has an inconsistent type from its parent, expecting type [ object ] but got type [ array ]');
+        eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
+    }
+
+    public function testDraft04ValidInheritanceTypeSchema(): void
+    {
+        $ast = (new Generator)->generateSchema(
+            [
+                '$schema' => Draft::Draft04->value,
+                'type' => 'number',
+                'oneOf' => [
+                    [
+                        'multipleOf' => 5,
+                    ],
+                    [
+                        'multipleOf' => 3,
+                    ]
+                ]
+            ]
+        );
+
+        $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
+        $this->assertInstanceOf(Draft04NumberSchema::class, $reconstructed);
+        $this->assertNotNull($reconstructed->oneOf);
+        foreach ($reconstructed->oneOf as $definition) {
+            $this->assertInstanceOf(Draft04NumberSchema::class, $definition);
+        }
+
+        $ast = (new Generator)->generateSchema(
+            [
+                '$schema' => Draft::Draft04->value,
+                'type' => 'object',
+                'oneOf' => [
+                    [
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                            'benefit' => ['type' => 'number'],
+                        ],
+                        'additionalProperties' => false,
+                        'required' => ['interest'],
+                    ],
+                    [
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                            'interest' => ['type' => 'number'],
+                        ],
+                        'additionalProperties' => false,
+                        'required' => ['interest'],
+                    ]
+                ]
+            ]
+        );
+
+        $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
+        $this->assertInstanceOf(Draft04ObjectSchema::class, $reconstructed);
+        $this->assertNotNull($reconstructed->oneOf);
+        foreach ($reconstructed->oneOf as $definition) {
+            $this->assertInstanceOf(Draft04ObjectSchema::class, $definition);
+        }
     }
 }

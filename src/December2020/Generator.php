@@ -17,6 +17,7 @@ use Giann\Schematics\December2020\StringSchema;
 use Giann\Schematics\December2020\Type;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\Exception\InvalidSchemaKeywordValueException;
+use Giann\Schematics\Exception\InvalidSchemaTypeException;
 use Giann\Schematics\GeneratorHelper;
 use Giann\Trunk\Trunk;
 use PhpParser\Node\Arg;
@@ -282,6 +283,20 @@ class Generator
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a Schema[] at ' . $path
                         );
+                    }
+
+                    if (isset($rawSchema['type'])) {
+                        foreach ($subs as &$sub) {
+                            if (
+                                !array_key_exists('type', $sub->arrayRawValue()) &&
+                                !array_key_exists('$ref', $sub->arrayRawValue())
+                            ) {
+                                $sub = new Trunk(array_merge(
+                                    ['type' => $rawSchema['type']->stringValue()],
+                                    $sub->arrayRawValue()
+                                ));
+                            }
+                        }
                     }
 
                     $parameters[] = new Arg(
