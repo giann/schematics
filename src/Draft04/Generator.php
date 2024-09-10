@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Giann\Schematics\Draft04;
 
+use Exception;
 use Giann\Schematics\Draft04\ArraySchema;
 use Giann\Schematics\Draft04\BooleanSchema;
 use Giann\Schematics\Draft04\ContentEncoding;
@@ -16,6 +17,7 @@ use Giann\Schematics\Draft04\StringSchema;
 use Giann\Schematics\Draft04\Type;
 use Giann\Schematics\Exception\InvalidSchemaException;
 use Giann\Schematics\Exception\InvalidSchemaKeywordValueException;
+use Giann\Schematics\Exception\InvalidSchemaTypeException;
 use Giann\Schematics\GeneratorHelper;
 use Giann\Trunk\Trunk;
 use PhpParser\Node\Arg;
@@ -277,6 +279,20 @@ class Generator
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a Schema[] at ' . $path
                         );
+                    }
+
+                    if (isset($rawSchema['type'])) {
+                        foreach ($subs as &$sub) {
+                            if (
+                                !array_key_exists('type', $sub->arrayRawValue()) &&
+                                !array_key_exists('$ref', $sub->arrayRawValue())
+                            ) {
+                                $sub = new Trunk(array_merge(
+                                    ['type' => $rawSchema['type']->stringValue()],
+                                    $sub->arrayRawValue()
+                                ));
+                            }
+                        }
                     }
 
                     $parameters[] = new Arg(

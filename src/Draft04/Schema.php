@@ -9,6 +9,7 @@ use BackedEnum;
 use Giann\Schematics\Draft;
 use Giann\Schematics\Draft04\Property\Property;
 use Giann\Schematics\Exception\InvalidSchemaException;
+use Giann\Schematics\Exception\InvalidSchemaTypeException;
 use Giann\Schematics\ExcludedFromSchema;
 use Giann\Schematics\NotRequired;
 use Giann\Schematics\Renamed;
@@ -66,7 +67,8 @@ class Schema implements JsonSerializable
      * @param Schema[]|null $anyOf An instance validates successfully against this keyword if it validates successfully against at least one schema defined by this keyword's value
      * @param Schema|null $not An instance is valid against this keyword if it fails to validate successfully against the schema defined by this keyword
      * @param string|null $enumPattern Builds enum field using a list of constant matching this pattern (ex: 'MyClass::VALUE_*')
-     * @param class-string<UnitEnum>|null $enumClass Builds enum field using a php enum 
+     * @param class-string<UnitEnum>|null $enumClass Builds enum field using a php enum
+     * @throws InvalidSchemaTypeException
      */
     public function __construct(
         public array $type = [],
@@ -95,6 +97,12 @@ class Schema implements JsonSerializable
 
         if ($this->enum === null && $enumPattern !== null) {
             $this->enum = array_merge($this->enum ?? [], self::patternToEnum($enumPattern) ?? []);
+        }
+
+        if (!empty($this->type)) {
+            $this->validateTypeInheritance('oneOf');
+            $this->validateTypeInheritance('anyOf');
+            $this->validateTypeInheritance('allOf');
         }
     }
 
@@ -681,5 +689,30 @@ class Schema implements JsonSerializable
                 }, $this->anyOf)
             ] : [])
             + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : []);
+    }
+
+    /**
+     * @throws InvalidSchemaTypeException
+     */
+    protected function validateTypeInheritance(string $property): void
+    {
+        if (($this->{$property} ?? []) !== []) {
+            /** @var Schema $child */
+            foreach ($this->{$property} as $index => $child) {
+                if (empty($child->type) && $child->ref !== null) {
+                    continue;
+                }
+
+                if ($this->type !== $child->type) {
+                    throw new InvalidSchemaTypeException(
+                        'Property ' . $property . '/' . $index .
+                        ' has an inconsistent type from its parent, expecting type [ ' .
+                        implode(', ', array_map(fn (Type $type) => $type->value, $this->type)). ' ]' .
+                         ' but got type [ ' .
+                        implode(', ', array_map(fn (Type $type) => $type->value, $child->type)). ' ]'
+                    );
+                }
+            }
+        }
     }
 }

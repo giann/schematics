@@ -9,6 +9,7 @@ use BackedEnum;
 use Giann\Schematics\Draft;
 use Giann\Schematics\December2020\Property\Property;
 use Giann\Schematics\Exception\InvalidSchemaException;
+use Giann\Schematics\Exception\InvalidSchemaTypeException;
 use Giann\Schematics\ExcludedFromSchema;
 use Giann\Schematics\NotRequired;
 use Giann\Schematics\Renamed;
@@ -108,6 +109,12 @@ class Schema implements JsonSerializable
 
         if ($this->enum === null && $enumPattern !== null) {
             $this->enum = array_merge($this->enum ?? [], self::patternToEnum($enumPattern) ?? []);
+        }
+
+        if (!empty($this->type)) {
+            $this->validateTypeInheritance('oneOf');
+            $this->validateTypeInheritance('anyOf');
+            $this->validateTypeInheritance('allOf');
         }
     }
 
@@ -709,5 +716,30 @@ class Schema implements JsonSerializable
             + ($this->if !== null ? ['if' => $this->if->jsonSerialize()] : [])
             + ($this->then !== null ? ['then' => $this->then->jsonSerialize()] : [])
             + ($this->else !== null ? ['else' => $this->else->jsonSerialize()] : []);
+    }
+
+    /**
+     * @throws InvalidSchemaTypeException
+     */
+    protected function validateTypeInheritance(string $property): void
+    {
+        if (($this->{$property} ?? []) !== []) {
+            /** @var Schema $child */
+            foreach ($this->{$property} as $index => $child) {
+                if (empty($child->type) && $child->ref !== null) {
+                    continue;
+                }
+
+                if ($this->type !== $child->type) {
+                    throw new InvalidSchemaTypeException(
+                        'Property ' . $property . '/' . $index .
+                        ' has an inconsistent type from its parent, expecting type [ ' .
+                        implode(', ', array_map(fn (Type $type) => $type->value, $this->type)). ' ]' .
+                        ' but got type [ ' .
+                        implode(', ', array_map(fn (Type $type) => $type->value, $child->type)). ' ]'
+                    );
+                }
+            }
+        }
     }
 }
