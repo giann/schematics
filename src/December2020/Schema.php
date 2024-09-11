@@ -28,13 +28,9 @@ use ReflectionUnionType;
 use UnitEnum;
 
 // Use to differenciate a property with a null value from the absence of the property. ex: { "const": null }
-final class NullConst
-{
-}
+final class NullConst {}
 
-final class CircularReference
-{
-}
+final class CircularReference {}
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_PROPERTY | Attribute::TARGET_METHOD)]
 class Schema implements JsonSerializable
@@ -110,38 +106,6 @@ class Schema implements JsonSerializable
         if ($this->enum === null && $enumPattern !== null) {
             $this->enum = self::patternToEnum($enumPattern) ?? [];
         }
-    }
-
-
-    /**
-     * @throws InvalidSchemaTypeException
-     */
-    public function validate(): bool
-    {
-        if (!empty($this->type)) {
-            foreach (['oneOf', 'anyOf', 'allOf'] as $property) {
-                if (($this->{$property} ?? []) !== []) {
-                    /** @var \Giann\Schematics\December2020\Schema $child */
-                    foreach ($this->{$property} as $index => $child) {
-                        if (empty($child->type) && $child->ref !== null) {
-                            continue;
-                        }
-
-                        if ($this->type !== $child->type) {
-                            throw new InvalidSchemaTypeException(
-                                'Property ' . $property . '/' . $index .
-                                ' has an inconsistent type from its parent, expecting type [ ' .
-                                implode(', ', array_map(fn (Type $type) => $type->value, $this->type)). ' ]' .
-                                ' but got type [ ' .
-                                implode(', ', array_map(fn (Type $type) => $type->value, $child->type)). ' ]'
-                            );
-                        }
-                    }
-                }
-            }
-        }
-
-        return true;
     }
 
     public function getResolvedRef(): ?string
@@ -272,10 +236,10 @@ class Schema implements JsonSerializable
         $schemaAttributes = array_values(
             array_filter(
                 array_map(
-                    fn ($attribute) => $attribute->newInstance(),
+                    fn($attribute) => $attribute->newInstance(),
                     $classReflection->getAttributes()
                 ),
-                fn ($attribute) => $attribute instanceof ObjectSchema,
+                fn($attribute) => $attribute instanceof ObjectSchema,
             )
         );
 
@@ -306,14 +270,14 @@ class Schema implements JsonSerializable
 
         $classReflection = new ReflectionClass($class);
         $attributes = array_map(
-            fn ($attribute) => $attribute->newInstance(),
+            fn($attribute) => $attribute->newInstance(),
             $classReflection->getAttributes()
         );
 
         $schemaAttributes = array_values(
             array_filter(
                 $attributes,
-                fn ($attribute) => $attribute instanceof ObjectSchema,
+                fn($attribute) => $attribute instanceof ObjectSchema,
             )
         );
 
@@ -336,7 +300,7 @@ class Schema implements JsonSerializable
         $schemaProperties = array_values(
             array_filter(
                 $attributes,
-                fn ($attribute) => $attribute instanceof Property,
+                fn($attribute) => $attribute instanceof Property,
             )
         );
 
@@ -401,7 +365,7 @@ class Schema implements JsonSerializable
             }
 
             $memberAttributes = array_map(
-                fn ($attr) => $attr->newInstance(),
+                fn($attr) => $attr->newInstance(),
                 $member->getAttributes()
             );
 
@@ -409,7 +373,7 @@ class Schema implements JsonSerializable
             if (count(
                 array_filter(
                     $memberAttributes,
-                    fn ($attr) => $attr instanceof ExcludedFromSchema
+                    fn($attr) => $attr instanceof ExcludedFromSchema
                 )
             ) > 0) {
                 continue;
@@ -418,14 +382,14 @@ class Schema implements JsonSerializable
             $isRequired = count(
                 array_filter(
                     $memberAttributes,
-                    fn ($attr) => $attr instanceof NotRequired
+                    fn($attr) => $attr instanceof NotRequired
                 )
             ) == 0;
 
             $names = array_values(
                 array_filter(
                     $memberAttributes,
-                    fn ($attr) => $attr instanceof Renamed
+                    fn($attr) => $attr instanceof Renamed
                 )
             );
             // If getter drop the `get`
@@ -439,7 +403,7 @@ class Schema implements JsonSerializable
             $propertySchemaProperties = array_values(
                 array_filter(
                     $memberAttributes,
-                    fn ($attr) => $attr instanceof Property
+                    fn($attr) => $attr instanceof Property
                 )
             );
 
@@ -447,7 +411,7 @@ class Schema implements JsonSerializable
             $propertySchemas = array_values(
                 array_filter(
                     $memberAttributes,
-                    fn ($attr) => $attr instanceof Schema
+                    fn($attr) => $attr instanceof Schema
                 )
             );
 
@@ -505,6 +469,9 @@ class Schema implements JsonSerializable
         }
 
         $schema->required = !empty($required) ? $required : null;
+
+        // Verify we generated a valid schema
+        (new SchemaValidator)->validate($schema, enforceSingleType: true);
 
         return $schema;
     }
@@ -679,7 +646,7 @@ class Schema implements JsonSerializable
     /** @return array<string,mixed> */
     public function jsonSerialize(): array
     {
-        $types = array_map(fn (Type $element) => $element->value, $this->type);
+        $types = array_map(fn(Type $element) => $element->value, $this->type);
         if ($this->not !== null) {
             $this->not->isRoot = false;
         }

@@ -31,8 +31,7 @@ final class EntityDeclaration
         public string $name,
         public Declaration $declaration,
         public string $ref,
-    ) {
-    }
+    ) {}
 }
 
 class EntityGenerator
@@ -126,7 +125,7 @@ class EntityGenerator
             && count(
                 array_filter(
                     $keys,
-                    fn ($key) => $key !== '$schema' && $key !== '$ref'
+                    fn($key) => $key !== '$schema' && $key !== '$ref'
                 )
             ) === 0;
     }
@@ -172,20 +171,22 @@ class EntityGenerator
             return false;
         }
 
-        foreach ([
-            'patternProperties',
-            'unevaluatedProperties',
-            'propertyNames',
-            'minProperties',
-            'maxProperties',
-            'dependentRequired',
-            'anyOf',
-            'oneOf',
-            'not',
-            'if',
-            'then',
-            'else',
-        ] as $keyword) {
+        foreach (
+            [
+                'patternProperties',
+                'unevaluatedProperties',
+                'propertyNames',
+                'minProperties',
+                'maxProperties',
+                'dependentRequired',
+                'anyOf',
+                'oneOf',
+                'not',
+                'if',
+                'then',
+                'else',
+            ] as $keyword
+        ) {
             if (isset($schema[$keyword])) {
                 if ($throw) {
                     throw new SchemaCantBeEntityException('Schema has ' . $keyword);
@@ -227,7 +228,7 @@ class EntityGenerator
         return array_merge(
             ($this->namespace !== null ? [(new Namespace_($this->namespace))->getNode()] : []),
             array_map(
-                fn ($decl) => $decl->declaration->getNode(),
+                fn($decl) => $decl->declaration->getNode(),
                 array_values($this->registry)
             )
         );
@@ -262,7 +263,7 @@ class EntityGenerator
                 && count(
                     array_filter(
                         $keys,
-                        fn ($key) => $key !== '$schema' && $key !== '$ref'
+                        fn($key) => $key !== '$schema' && $key !== '$ref'
                     )
                 ) > 0
             ) {
@@ -301,7 +302,7 @@ class EntityGenerator
                 && count(
                     array_filter(
                         $keys,
-                        fn ($key) => $key !== '$schema' && $key !== '$ref'
+                        fn($key) => $key !== '$schema' && $key !== '$ref'
                     )
                 ) === 0
             ) {
@@ -463,36 +464,27 @@ class EntityGenerator
             case 'string':
                 $name = StringSchema::class;
 
-                $empty = [];
                 $this->generator->buildStringKeywords(
                     rawSchema: $schema,
-                    path: '#',
                     parameters: $attributeArgs,
-                    keywords: $empty
                 );
 
                 break;
             case 'number':
                 $name = NumberSchema::class;
 
-                $empty = [];
                 $this->generator->buildNumberKeywords(
                     rawSchema: $schema,
-                    path: '#',
                     parameters: $attributeArgs,
-                    keywords: $empty
                 );
 
                 break;
             case 'integer':
                 $name = IntegerSchema::class;
 
-                $empty = [];
                 $this->generator->buildNumberKeywords(
                     rawSchema: $schema,
-                    path: '#',
                     parameters: $attributeArgs,
-                    keywords: $empty
                 );
 
                 break;
@@ -500,12 +492,9 @@ class EntityGenerator
                 $name = ObjectSchema::class;
 
                 if (!$entity && !$this->canBeEntity($schema)) {
-                    $empty = [];
                     $this->generator->buildObjectKeywords(
                         rawSchema: $schema,
-                        path: '#',
                         parameters: $attributeArgs,
-                        keywords: $empty
                     );
                 }
 
@@ -513,12 +502,9 @@ class EntityGenerator
             case 'array':
                 $name = ArraySchema::class;
 
-                $empty = [];
                 $this->generator->buildArrayKeywords(
                     rawSchema: $schema,
-                    path: '#',
                     parameters: $attributeArgs,
-                    keywords: $empty
                 );
 
                 break;
@@ -540,7 +526,7 @@ class EntityGenerator
             && count(
                 array_filter(
                     $keys,
-                    fn ($key) => $key !== '$schema' && $key !== 'type'
+                    fn($key) => $key !== '$schema' && $key !== 'type'
                 )
             ) === 0
         ) {
@@ -575,7 +561,7 @@ class EntityGenerator
                     name: new Identifier($keyword),
                     value: new Array_(
                         array_map(
-                            fn (Trunk $el) => new ArrayItem(
+                            fn(Trunk $el) => new ArrayItem(
                                 $this->helper->phpValueToExpr($el->data)
                             ),
                             $values
@@ -631,7 +617,7 @@ class EntityGenerator
                         name: new Identifier($keyword),
                         value: new Array_(
                             array_map(
-                                fn ($subSchema) => new ArrayItem(
+                                fn($subSchema) => new ArrayItem(
                                     // TODO: This does not work if a def is more deeply referencing an entity that should be generated
                                     $this->generator->generateSchema($subSchema)
                                 ),
