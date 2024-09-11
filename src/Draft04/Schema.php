@@ -92,18 +92,44 @@ class Schema implements JsonSerializable
         ?string $enumClass = null,
     ) {
         if ($this->enum === null && $enumClass !== null) {
-            $this->enum = array_merge($this->enum ?? [], self::classToEnum($enumClass));
+            $this->enum = self::classToEnum($enumClass);
         }
 
         if ($this->enum === null && $enumPattern !== null) {
-            $this->enum = array_merge($this->enum ?? [], self::patternToEnum($enumPattern) ?? []);
+            $this->enum = self::patternToEnum($enumPattern) ?? [];
+        }
+    }
+
+
+    /**
+     * @throws InvalidSchemaTypeException
+     */
+    public function validate(): bool
+    {
+        if (!empty($this->type)) {
+            foreach (['oneOf', 'anyOf', 'allOf'] as $property) {
+                if (($this->{$property} ?? []) !== []) {
+                    /** @var Schema $child */
+                    foreach ($this->{$property} as $index => $child) {
+                        if (empty($child->type) && $child->ref !== null) {
+                            continue;
+                        }
+
+                        if ($this->type !== $child->type) {
+                            throw new InvalidSchemaTypeException(
+                                'Property ' . $property . '/' . $index .
+                                ' has an inconsistent type from its parent, expecting type [ ' .
+                                implode(', ', array_map(fn (Type $type) => $type->value, $this->type)). ' ]' .
+                                ' but got type [ ' .
+                                implode(', ', array_map(fn (Type $type) => $type->value, $child->type)). ' ]'
+                            );
+                        }
+                    }
+                }
+            }
         }
 
-        if (!empty($this->type)) {
-            $this->validateTypeInheritance('oneOf');
-            $this->validateTypeInheritance('anyOf');
-            $this->validateTypeInheritance('allOf');
-        }
+        return true;
     }
 
     public function getResolvedRef(): ?string
@@ -689,30 +715,5 @@ class Schema implements JsonSerializable
                 }, $this->anyOf)
             ] : [])
             + ($this->not !== null ? ['not' => $this->not->jsonSerialize()] : []);
-    }
-
-    /**
-     * @throws InvalidSchemaTypeException
-     */
-    protected function validateTypeInheritance(string $property): void
-    {
-        if (($this->{$property} ?? []) !== []) {
-            /** @var Schema $child */
-            foreach ($this->{$property} as $index => $child) {
-                if (empty($child->type) && $child->ref !== null) {
-                    continue;
-                }
-
-                if ($this->type !== $child->type) {
-                    throw new InvalidSchemaTypeException(
-                        'Property ' . $property . '/' . $index .
-                        ' has an inconsistent type from its parent, expecting type [ ' .
-                        implode(', ', array_map(fn (Type $type) => $type->value, $this->type)). ' ]' .
-                         ' but got type [ ' .
-                        implode(', ', array_map(fn (Type $type) => $type->value, $child->type)). ' ]'
-                    );
-                }
-            }
-        }
     }
 }
