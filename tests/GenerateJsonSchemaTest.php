@@ -66,8 +66,7 @@ class Person implements JsonSerializable
         // Inferred $ref to self
         #[NotRequired]
         public ?Person $father = null,
-    ) {
-    }
+    ) {}
 
     #[IntegerSchema]
     public function getInheritedComputedProperty(): int
@@ -114,8 +113,7 @@ class Person04 implements JsonSerializable
         // Inferred $ref to self
         #[NotRequired]
         public ?Person04 $father = null,
-    ) {
-    }
+    ) {}
 
     #[Draft04IntegerSchema]
     public function getInheritedComputedProperty(): int
@@ -183,9 +181,7 @@ class Hero extends Person implements JsonSerializable
         return 13;
     }
 
-    public function getNotAProperty(): void
-    {
-    }
+    public function getNotAProperty(): void {}
 
     public function jsonSerialize(): mixed
     {
@@ -238,9 +234,7 @@ class Hero04 extends Person04 implements JsonSerializable
         return 13;
     }
 
-    public function getNotAProperty(): void
-    {
-    }
+    public function getNotAProperty(): void {}
 
     public function jsonSerialize(): mixed
     {
@@ -339,12 +333,20 @@ final class GenerateJsonSchemaTest extends TestCase
                         ],
                     ],
                     'required' => [
-                        'id', 'names', 'age', 'sex', 'height', 'inheritedComputedProperty',
+                        'id',
+                        'names',
+                        'age',
+                        'sex',
+                        'height',
+                        'inheritedComputedProperty',
                     ]
                 ]
             ],
             'required' => [
-                'superName', 'power', 'computed', 'ok',
+                'superName',
+                'power',
+                'computed',
+                'ok',
             ],
         ];
 
@@ -356,7 +358,6 @@ final class GenerateJsonSchemaTest extends TestCase
         // Generate annotation expression AST from json schema
         $ast = (new Generator)->generateSchema(Schema::classSchema(Hero::class)->jsonSerialize());
         $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
-        $reconstructed->validate();
 
         // Compare generated annotations schema to schema built from classes
         $this->assertInstanceOf(Schema::class, $reconstructed);
@@ -387,7 +388,10 @@ final class GenerateJsonSchemaTest extends TestCase
 
     public function testInvalidInheritanceTypeSchema(): void
     {
-        $ast = (new Generator)->generateSchema(
+        $this->expectException(InvalidSchemaTypeException::class);
+        $this->expectExceptionMessage('Property oneOf/0 has an inconsistent type from its parent, expecting type [ object ] but got type [ array ]');
+
+        (new Generator)->generateSchema(
             [
                 '$schema' => Draft::December2020->value,
                 'type' => 'object',
@@ -408,12 +412,6 @@ final class GenerateJsonSchemaTest extends TestCase
                 ]
             ]
         );
-
-        $this->expectException(InvalidSchemaTypeException::class);
-        $this->expectExceptionMessage('Property oneOf/0 has an inconsistent type from its parent, expecting type [ object ] but got type [ array ]');
-        /** @var Schema $reconstructed */
-        $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
-        $reconstructed->validate();
     }
 
     public function testValidInheritanceTypeSchema(): void
@@ -434,7 +432,6 @@ final class GenerateJsonSchemaTest extends TestCase
         );
 
         $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
-        $reconstructed->validate();
         $this->assertInstanceOf(NumberSchema::class, $reconstructed);
         $this->assertNotNull($reconstructed->oneOf);
         foreach ($reconstructed->oneOf as $definition) {
@@ -467,7 +464,6 @@ final class GenerateJsonSchemaTest extends TestCase
         );
 
         $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
-        $reconstructed->validate();
         $this->assertInstanceOf(ObjectSchema::class, $reconstructed);
         $this->assertNotNull($reconstructed->oneOf);
         foreach ($reconstructed->oneOf as $definition) {
@@ -477,25 +473,27 @@ final class GenerateJsonSchemaTest extends TestCase
 
     public function testInvalidSchema(): void
     {
-        try {
-            (new Generator)->generateSchema(
-                [
-                    'type' => 'object',
-                    'properties' => [
-                        'list' => [
-                            // Misplaced `items` keyword
-                            'items' => [
+        $this->expectException(InvalidSchemaException::class);
+        $this->expectExceptionMessage('Invalid or misplaced keywords at #/properties/list: properties');
+
+        (new Generator)->generateSchema(
+            [
+                'type' => 'object',
+                'properties' => [
+                    'list' => [
+                        // Misplaced `items` keyword
+                        'items' => [
+                            'type' => 'string'
+                        ],
+                        'properties' => [
+                            'nope' => [
                                 'type' => 'string'
                             ]
                         ]
                     ]
                 ]
-            );
-
-            $this->assertTrue(false);
-        } catch (InvalidSchemaException $e) {
-            $this->assertEquals('Invalid or misplaced keywords at #/properties/list: items', $e->getMessage());
-        }
+            ]
+        );
     }
 
     public function testDraft04Schema(): void
@@ -579,12 +577,20 @@ final class GenerateJsonSchemaTest extends TestCase
                         ],
                     ],
                     'required' => [
-                        'id', 'names', 'age', 'sex', 'height', 'inheritedComputedProperty',
+                        'id',
+                        'names',
+                        'age',
+                        'sex',
+                        'height',
+                        'inheritedComputedProperty',
                     ]
                 ]
             ],
             'required' => [
-                'superName', 'power', 'computed', 'ok',
+                'superName',
+                'power',
+                'computed',
+                'ok',
             ],
         ];
 
@@ -596,7 +602,6 @@ final class GenerateJsonSchemaTest extends TestCase
         // Generate annotation expression AST from json schema
         $ast = (new Generator)->generateSchema(Draft04Schema::classSchema(Hero04::class)->jsonSerialize());
         $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
-        $reconstructed->validate();
 
         // Compare generated annotations schema to schema built from classes
         $this->assertInstanceOf(Draft04Schema::class, $reconstructed);
@@ -627,7 +632,10 @@ final class GenerateJsonSchemaTest extends TestCase
 
     public function testDraft04InvalidInheritanceTypeSchema(): void
     {
-        $ast = (new Generator)->generateSchema(
+        $this->expectException(InvalidSchemaTypeException::class);
+        $this->expectExceptionMessage('Property oneOf/0 has an inconsistent type from its parent, expecting type [ object ] but got type [ array ]');
+
+        (new Generator)->generateSchema(
             [
                 '$schema' => Draft::Draft04->value,
                 'type' => 'object',
@@ -648,12 +656,6 @@ final class GenerateJsonSchemaTest extends TestCase
                 ]
             ]
         );
-
-        $this->expectException(InvalidSchemaTypeException::class);
-        $this->expectExceptionMessage('Property oneOf/0 has an inconsistent type from its parent, expecting type [ object ] but got type [ array ]');
-        /** @var Schema $reconstructed */
-        $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
-        $reconstructed->validate();
     }
 
     public function testDraft04ValidInheritanceTypeSchema(): void
@@ -674,7 +676,6 @@ final class GenerateJsonSchemaTest extends TestCase
         );
 
         $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
-        $reconstructed->validate();
         $this->assertInstanceOf(Draft04NumberSchema::class, $reconstructed);
         $this->assertNotNull($reconstructed->oneOf);
         foreach ($reconstructed->oneOf as $definition) {
@@ -707,7 +708,6 @@ final class GenerateJsonSchemaTest extends TestCase
         );
 
         $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
-        $reconstructed->validate();
         $this->assertInstanceOf(Draft04ObjectSchema::class, $reconstructed);
         $this->assertNotNull($reconstructed->oneOf);
         foreach ($reconstructed->oneOf as $definition) {

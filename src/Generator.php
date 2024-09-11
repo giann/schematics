@@ -30,7 +30,7 @@ class Generator
             $draft = Draft::from(
                 str_replace(
                     'http://',
-                    'https://', 
+                    'https://',
                     trim($rawSchema['$schema']->string() ?? Draft::December2020->value, '#')
                 )
             );
