@@ -153,6 +153,7 @@ class SchemaValidator
             switch ($property) {
                 case '$schema':
                 case 'default':
+                case 'example':
                     $keywords[$property] = true;
                     break;
                 case 'type':
@@ -537,8 +538,8 @@ class SchemaValidator
                         );
                     }
 
-                    if ($subschema = $value->map()) {
-                        $this->validate($subschema, $path . '/' . $property);
+                    if ($value->map() !== null) {
+                        $this->validate($value, $path . '/' . $property);
                     }
 
                     $keywords[$property] = true;
