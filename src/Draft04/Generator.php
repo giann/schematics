@@ -306,8 +306,6 @@ class Generator
                 case 'multipleOf':
                 case 'minimum':
                 case 'maximum':
-                case 'exclusiveMinimum':
-                case 'exclusiveMaximum':
                     $parameters[] = new Arg(
                         name: new Identifier($property),
                         value: $value->int() !== null
@@ -315,6 +313,13 @@ class Generator
                             : new DNumber($value->floatValue()),
                     );
 
+                    break;
+                case 'exclusiveMinimum':
+                case 'exclusiveMaximum':
+                    $parameters[] = new Arg(
+                        name: new Identifier($property),
+                        value: $this->helper->boolExpr($value->boolValue())
+                    );
                     break;
             }
         }
