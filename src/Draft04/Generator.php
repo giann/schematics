@@ -435,23 +435,37 @@ class Generator
             // Generate parameters
             switch ($property) {
                 case 'items':
-                    $parameters[] = new Arg(
-                        name: new Identifier($property),
-                        value: $this->generateSchema($value, root: false),
-                    );
-                    break;
-                case 'prefixItems':
-                    $subs = $value->listValue();
-                    $parameters[] = new Arg(
-                        name: new Identifier($property),
-                        value: new Array_(
-                            array_map(
-                                fn($subSchema) => new ArrayItem($this->generateSchema($subSchema, root: false)),
-                                $subs
+                    if ($value->map() !== null) {
+                        $parameters[] = new Arg(
+                            name: new Identifier($property),
+                            value: $this->generateSchema($value, root: false),
+                        );
+                    } elseif ($value->list() !== null) {
+                        $parameters[] = new Arg(
+                            name: new Identifier($property),
+                            value: new Array_(
+                                array_map(
+                                    fn($el) => new ArrayItem(
+                                        $this->generateSchema($el, root: false),
+                                    ),
+                                    $value->listValue(),
+                                )
                             )
-                        )
-                    );
+                        );
+                    }
                     break;
+                case 'additionalItems':
+                    if ($value->map() !== null) {
+                        $parameters[] = new Arg(
+                            name: new Identifier($property),
+                            value: $this->generateSchema($value, root: false),
+                        );
+                    } else {
+                        $parameters[] = new Arg(
+                            name: new Identifier($property),
+                            value: $this->helper->boolExpr($value->boolValue()),
+                        );
+                    }
                 case 'minItems':
                 case 'maxItems':
                     $parameters[] = new Arg(

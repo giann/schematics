@@ -29,8 +29,8 @@ class ArraySchema extends Schema
      * @param Schema|null $not
      * @param string|null $enumPattern
      * @param class-string<UnitEnum>|null $enumClass
-     * @param Schema|null $items Applies its subschema to all instance elements at indexes greater than the length of the "prefixItems" array in the same schema object, as reported by the annotation result of that "prefixItems" keyword. If no such annotation result exists, "items" applies its subschema to all instance array elements
-     * @param Schema[]|null $prefixItems Validation succeeds if each element of the instance validates against the schema at the same position, if any
+     * @param Schema|Schema[]|null $items Applies its subschema to all instance elements at indexes greater than the length of the "prefixItems" array in the same schema object, as reported by the annotation result of that "prefixItems" keyword. If no such annotation result exists, "items" applies its subschema to all instance array elements
+     * @param Schema|bool|null $additionalItems 
      * @param boolean|null $uniqueItems If this keyword has boolean value false, the instance validates successfully. If it has boolean value true, the instance validates successfully if all of its elements are unique
      */
     public function __construct(
@@ -53,8 +53,8 @@ class ArraySchema extends Schema
         ?string $enumPattern = null,
         ?string $enumClass = null,
 
-        public ?Schema $items = null,
-        public ?array $prefixItems = null,
+        public Schema|array|null $items = null,
+        public Schema|bool|null $additionalItems = null,
         public ?int $minItems = null,
         public ?int $maxItems = null,
         public ?bool $uniqueItems = null,
@@ -88,10 +88,15 @@ class ArraySchema extends Schema
 
         if ($this->items instanceof Schema) {
             $this->items->resolveRef($root);
+        } elseif (is_array($this->items)) {
+            /** @var Schema $item */
+            foreach ($this->items as $item) {
+                $item->resolveRef($root);
+            }
         }
 
-        foreach ($this->prefixItems ?? [] as $schema) {
-            $schema->resolveRef($root);
+        if ($this->additionalItems instanceof Schema) {
+            $this->additionalItems->resolveRef($root);
         }
 
         return $this;
@@ -101,21 +106,38 @@ class ArraySchema extends Schema
     {
         $serialized = parent::jsonSerialize();
 
-        if ($this->items !== null) {
+        if ($this->items instanceof Schema) {
             $this->items->isRoot = false;
+        } elseif (is_array($this->items)) {
+            /** @var Schema $item */
+            foreach ($this->items as $item) {
+                $item->isRoot = false;
+            }
+        }
+
+        if ($this->additionalItems instanceof Schema) {
+            $this->additionalItems->isRoot = false;
+        }
+
+        $items = null;
+        if ($this->items instanceof Schema) {
+            $items = $this->items->jsonSerialize();
+        } elseif (is_array($this->items)) {
+            $items = [];
+            /** @var Schema $item */
+            foreach ($this->items as $item) {
+                $items[] = $item->jsonSerialize();
+            }
+        }
+
+        $additionalItems = $this->additionalItems;
+        if ($this->additionalItems instanceof Schema) {
+            $additionalItems = $this->additionalItems->jsonSerialize();
         }
 
         return $serialized
-            + ($this->items !== null ? ['items' => $this->items->jsonSerialize()] : [])
-            + ($this->prefixItems !== null ? [
-                'prefixItems' => array_map(
-                    function (Schema $element) {
-                        $element->isRoot = false;
-                        return $element->jsonSerialize();
-                    },
-                    $this->prefixItems
-                )
-            ] : [])
+            + ($items !== null ? ['items' => $items] : [])
+            + ($additionalItems !== null ? ['additionalItems' => $additionalItems] : [])
             + ($this->uniqueItems !== null ? ['uniqueItems' => $this->uniqueItems] : [])
             + ($this->minItems !== null ? ['minItems' => $this->minItems] : [])
             + ($this->maxItems !== null ? ['maxItems' => $this->maxItems] : []);

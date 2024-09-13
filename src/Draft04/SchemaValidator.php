@@ -424,27 +424,27 @@ class SchemaValidator
         foreach ($schema->mapValue() as $property => $value) {
             switch ($property) {
                 case 'items':
-                    if ($value->map() === null) {
+                    if ($value->map() !== null) {
+                        $this->validate($value, $path . '/' . $property);
+                    } elseif ($value->list() !== null) {
+                        foreach ($value->listValue() as $index => $item) {
+                            $this->validate($item, $path . '/' . $property . '/' . $index);
+                        }
+                    } else {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema at ' . $path
+                            '`' . $property . '` must be a Schema or []Schema at ' . $path
                         );
                     }
-
-                    $this->validate($value, $path . '/' . $property);
 
                     $keywords[$property] = true;
                     break;
-                case 'prefixItems':
-                    $subs = $value->list();
-
-                    if ($subs === null) {
+                case 'additionalItems':
+                    if ($value->map() !== null) {
+                        $this->validate($value, $path . '/' . $property);
+                    } elseif ($value->bool() === null) {
                         throw new InvalidSchemaKeywordValueException(
-                            '`' . $property . '` must be a Schema[] at ' . $path
+                            '`' . $property . '` must be a Schema or bool at ' . $path
                         );
-                    }
-
-                    foreach ($subs as $index => $subschema) {
-                        $this->validate($subschema, $path . '/' . $property . '/' . $index);
                     }
 
                     $keywords[$property] = true;
