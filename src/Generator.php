@@ -14,6 +14,10 @@ use ValueError;
 
 class Generator
 {
+    public function __construct(
+        private Draft $defaultDraft = Draft::December2020
+    ) {}
+
     /**
      * Generate Schema expression from json schema
      * @param array<string, mixed>|Trunk $rawSchema
@@ -25,13 +29,13 @@ class Generator
     {
         $rawSchema = $rawSchema instanceof Trunk ? $rawSchema : new Trunk($rawSchema);
 
-        $draft = Draft::December2020;
+        $draft = $this->defaultDraft;
         try {
             $draft = Draft::from(
                 str_replace(
                     'http://',
                     'https://',
-                    trim($rawSchema['$schema']->string() ?? Draft::December2020->value, '#')
+                    trim($rawSchema['$schema']->string() ?? $this->defaultDraft->value, '#')
                 )
             );
         } catch (ValueError $e) {

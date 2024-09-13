@@ -13,6 +13,10 @@ use ValueError;
 
 class SchemaValidator
 {
+    public function __construct(
+        private Draft $defaultDraft = Draft::December2020
+    ) {}
+
     /**
      * Validate schema
      *
@@ -26,13 +30,13 @@ class SchemaValidator
     {
         $schema = $schema instanceof Trunk ? $schema : new Trunk($schema);
 
-        $draft = Draft::December2020;
+        $draft = $this->defaultDraft;
         try {
             $draft = Draft::from(
                 str_replace(
                     'http://',
                     'https://',
-                    trim($schema['$schema']->string() ?? Draft::December2020->value, '#')
+                    trim($schema['$schema']->string() ?? $this->defaultDraft->value, '#')
                 )
             );
         } catch (ValueError $e) {
