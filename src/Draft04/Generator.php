@@ -466,6 +466,7 @@ class Generator
                             value: $this->helper->boolExpr($value->boolValue()),
                         );
                     }
+                    break;
                 case 'minItems':
                 case 'maxItems':
                     $parameters[] = new Arg(
