@@ -395,13 +395,23 @@ class SchemaValidator
                 case 'multipleOf':
                 case 'minimum':
                 case 'maximum':
-                case 'exclusiveMinimum':
-                case 'exclusiveMaximum':
                     $number = $value->int();
 
                     if ($number === null) {
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a int at ' . $path
+                        );
+                    }
+
+                    $keywords[$property] = true;
+                    break;
+                case 'exclusiveMinimum':
+                case 'exclusiveMaximum':
+                    $number = $value->bool();
+
+                    if ($number === null) {
+                        throw new InvalidSchemaKeywordValueException(
+                            '`' . $property . '` must be a bool at ' . $path
                         );
                     }
 
