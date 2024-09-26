@@ -18,7 +18,7 @@ class BooleanSchema extends Schema
      * @param string|null $title
      * @param string|null $description
      * @param string|null $comment
-     * @param string[]|null $examples
+     * @param mixed[]|null $examples
      * @param mixed $default
      * @param boolean|null $deprecated
      * @param boolean|null $readOnly

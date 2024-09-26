@@ -16,7 +16,7 @@ class BooleanSchema extends Schema
      * @param array<string,Schema|CircularReference|null> $definitions
      * @param string|null $title
      * @param string|null $description
-     * @param string[]|null $examples
+     * @param mixed[]|null $examples
      * @param mixed $default
 
      * @param boolean|null $readOnly
