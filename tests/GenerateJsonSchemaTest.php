@@ -22,6 +22,7 @@ use Giann\Schematics\December2020\Schema;
 use Giann\Schematics\December2020\StringSchema;
 use Giann\Schematics\Draft04\ArraySchema as Draft04ArraySchema;
 use Giann\Schematics\Draft04\BooleanSchema as Draft04BooleanSchema;
+use Giann\Schematics\Draft04\ConstSchema as Draft04ConstSchema;
 use Giann\Schematics\Draft04\EntityGenerator as Draft04EntityGenerator;
 use Giann\Schematics\Draft04\IntegerSchema as Draft04IntegerSchema;
 use Giann\Schematics\Draft04\NumberSchema as Draft04NumberSchema;
@@ -245,6 +246,21 @@ class Hero04 extends Person04 implements JsonSerializable
                 'computed' => $this->getComputed(),
                 'ok' => $this->isOk(),
             ];
+    }
+}
+
+final class Vehicle extends Draft04ConstSchema
+{
+    public function __construct()
+    {
+        parent::__construct(
+            new Draft04ObjectSchema(
+                properties: [
+                    'speed' => new Draft04IntegerSchema(),
+                    'weight' => new Draft04NumberSchema(),
+                ]
+            )
+        );
     }
 }
 
@@ -713,5 +729,24 @@ final class GenerateJsonSchemaTest extends TestCase
         foreach ($reconstructed->oneOf as $definition) {
             $this->assertInstanceOf(Draft04ObjectSchema::class, $definition);
         }
+    }
+
+    public function testConstSchema(): void
+    {
+        $this->assertEquals(
+            [
+                '$schema' => Draft::Draft04->value,
+                'type' => 'object',
+                'properties' => [
+                    'speed' => [
+                        'type' => 'integer'
+                    ],
+                    'weight' => [
+                        'type' => 'number'
+                    ]
+                ]
+            ],
+            (new Vehicle)->jsonSerialize()
+        );
     }
 }
