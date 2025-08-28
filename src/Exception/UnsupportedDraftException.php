@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Giann\Schematics\Exception;
 
-use Exception;
+use LogicException;
 
-class UnsupportedDraftException extends Exception
+class UnsupportedDraftException extends LogicException
 {
 }
