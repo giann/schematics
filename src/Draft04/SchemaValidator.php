@@ -54,7 +54,7 @@ class SchemaValidator
         // If someObject were not processed, it means the schema is invalid
         $unprocessed = array_filter(
             array_keys($keywords),
-            fn($keyword) => $keywords[$keyword] === false
+            fn ($keyword) => $keywords[$keyword] === false
         );
         if (count($unprocessed) > 0) {
             throw new InvalidSchemaException('Invalid or misplaced keywords at ' . $path . ': ' . implode(', ', $unprocessed));
@@ -126,13 +126,13 @@ class SchemaValidator
 
         $types = array_filter(
             array_map(
-                fn($type) => in_array(
+                fn ($type) => in_array(
                     $type,
-                    array_map(fn($case) => $case->value, Type::cases())
+                    array_map(fn ($case) => $case->value, Type::cases())
                 ) ? Type::from($type) : null,
                 $types
             ),
-            fn($type) => $type !== null
+            fn ($type) => $type !== null
         );
 
         return $types;
@@ -165,16 +165,16 @@ class SchemaValidator
                             !empty($types)
                             && !empty(array_filter(
                                 $types,
-                                fn(Trunk $type) => !in_array(
+                                fn (Trunk $type) => !in_array(
                                     $type->string(),
-                                    array_map(fn($case) => $case->value, Type::cases())
+                                    array_map(fn ($case) => $case->value, Type::cases())
                                 )
                             ))
                         )
                     ) {
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a string|string[] of those possible values at ' . $path . ': '
-                                . implode(', ', array_map(fn($case) => $case->value, Type::cases()))
+                                . implode(', ', array_map(fn ($case) => $case->value, Type::cases()))
                         );
                     }
 
@@ -247,9 +247,9 @@ class SchemaValidator
                             throw new InvalidSchemaTypeException(
                                 'Property ' . $property . '/' . $index .
                                     ' has an inconsistent type from its parent, expecting type [ ' .
-                                    implode(', ', array_map(fn(Type $type) => $type->value, $schemaType)) . ' ]' .
+                                    implode(', ', array_map(fn (Type $type) => $type->value, $schemaType)) . ' ]' .
                                     ' but got type [ ' .
-                                    implode(', ', array_map(fn(Type $type) => $type->value, $subschemaType)) . ' ]'
+                                    implode(', ', array_map(fn (Type $type) => $type->value, $subschemaType)) . ' ]'
                             );
                         }
 
@@ -289,12 +289,12 @@ class SchemaValidator
                     if (
                         !in_array(
                             $value->string(),
-                            array_map(fn($case) => $case->value, Format::cases())
+                            array_map(fn ($case) => $case->value, Format::cases())
                         )
                     ) {
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a string of those possible values at ' . $path . ': '
-                                . implode(', ', array_map(fn($case) => $case->value, Format::cases()))
+                                . implode(', ', array_map(fn ($case) => $case->value, Format::cases()))
                         );
                     }
 
@@ -324,12 +324,12 @@ class SchemaValidator
                     if (
                         !in_array(
                             $value->string(),
-                            array_map(fn($case) => $case->value, ContentEncoding::cases())
+                            array_map(fn ($case) => $case->value, ContentEncoding::cases())
                         )
                     ) {
                         throw new InvalidSchemaKeywordValueException(
                             '`' . $property . '` must be a string of those possible values at ' . $path . ': '
-                                . implode(', ', array_map(fn($case) => $case->value, ContentEncoding::cases()))
+                                . implode(', ', array_map(fn ($case) => $case->value, ContentEncoding::cases()))
                         );
                     }
 
@@ -521,29 +521,21 @@ class SchemaValidator
                         );
                     }
 
-                    /** @var ?bool */
-                    $is_string_array = null;
                     foreach ($subs as $key => $subschema) {
-                        if ($subschema->string() !== null) {
-                            if ($is_string_array === false) {
-                                throw new InvalidSchemaException(
-                                    '`' . $property . '` must be a non empty array<string,Schema|string[]> at ' . $path
-                                );
+                        if ($subschema->list() !== null) {
+                            foreach ($subschema->listValue() as $element) {
+                                if ($element->string() === null) {
+                                    throw new InvalidSchemaException(
+                                        '`' . $property . '` must be a non empty array<string,Schema|string[]> at ' . $path
+                                    );
+                                }
                             }
-
-                            $is_string_array = true;
-                        } else {
-                            if ($is_string_array === true || $subschema->map() === null) {
-                                throw new InvalidSchemaException(
-                                    '`' . $property . '` must be a non empty array<string,Schema|string[]> at ' . $path
-                                );
-                            }
-
-                            $is_string_array = false;
-                        }
-
-                        if ($is_string_array === false) {
+                        } elseif ($subschema->map() !== null) {
                             $this->validate($subschema, $path . '/' . $property . '/' . $key);
+                        } else {
+                            throw new InvalidSchemaException(
+                                '`' . $property . '` must be a non empty array<string,Schema|string[]> at ' . $path
+                            );
                         }
                     }
 
@@ -567,7 +559,7 @@ class SchemaValidator
                         $value->list() === null
                         || !empty(array_filter(
                             $value->listValue(),
-                            fn(Trunk $el) => $el->string() === null
+                            fn (Trunk $el) => $el->string() === null
                         ))
                     ) {
                         throw new InvalidSchemaKeywordValueException(
