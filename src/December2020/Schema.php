@@ -260,7 +260,7 @@ class Schema implements JsonSerializable
 
     /**
      * Generate Schema from annotated class
-     * @param class-string $class
+     * @param string $class
      * @param ?Schema $root
      * @param bool $forceInfer if true will try to infer a schema even if there's no Schema attributes
      */
