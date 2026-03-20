@@ -264,6 +264,15 @@ final class Vehicle extends Draft04ConstSchema
     }
 }
 
+final class ForceInfer
+{
+    public function __construct(
+        public string $name,
+        public int $age,
+    ) {
+    }
+}
+
 final class GenerateJsonSchemaTest extends TestCase
 {
     public function testBasicSchema(): void
@@ -747,6 +756,50 @@ final class GenerateJsonSchemaTest extends TestCase
                 ]
             ],
             (new Vehicle)->jsonSerialize()
+        );
+    }
+
+    public function testForceInfer2020(): void
+    {
+        $rawSchema = [
+            '$schema' => Draft::December2020->value,
+            'type' => 'object',
+            'properties' => [
+                'name' => [
+                    'type' => 'string'
+                ],
+                'age' => [
+                    'type' => 'integer'
+                ]
+            ],
+            'required' => [ 'name', 'age' ]
+        ];
+
+        $this->assertEquals(
+            $rawSchema,
+            Schema::classSchema(ForceInfer::class, forceInfer: true)->jsonSerialize(),
+        );
+    }
+
+    public function testForceInfer04(): void
+    {
+        $rawSchema = [
+            '$schema' => Draft::Draft04->value,
+            'type' => 'object',
+            'properties' => [
+                'name' => [
+                    'type' => 'string'
+                ],
+                'age' => [
+                    'type' => 'integer'
+                ]
+            ],
+            'required' => [ 'name', 'age' ]
+        ];
+
+        $this->assertEquals(
+            $rawSchema,
+            Draft04Schema::classSchema(ForceInfer::class, forceInfer: true)->jsonSerialize(),
         );
     }
 }

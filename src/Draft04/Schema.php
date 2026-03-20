@@ -246,7 +246,13 @@ class Schema implements JsonSerializable
         return true;
     }
 
-    public static function classSchema(string $class, ?Schema $root = null): ?Schema
+    /**
+     * Generate Schema from annotated class
+     * @param class-string $class
+     * @param ?Schema $root
+     * @param bool $forceInfer if true will try to infer a schema even if there's no Schema attributes
+     */
+    public static function classSchema(string $class, ?Schema $root = null, bool $forceInfer = false): ?Schema
     {
         if ($class === '#') {
             return new Schema(id: '#');
@@ -269,7 +275,7 @@ class Schema implements JsonSerializable
             )
         );
 
-        if (empty($schemaAttributes)) {
+        if (empty($schemaAttributes) && !$forceInfer) {
             return null;
         }
 
@@ -277,10 +283,14 @@ class Schema implements JsonSerializable
             throw new InvalidArgumentException('The class ' . $class . ' has more than one object schema attribute');
         }
 
-        $schema = $schemaAttributes[0];
+        $schema = $schemaAttributes[0] ?? null;
 
         if (!($schema instanceof ObjectSchema)) {
-            return null;
+            if (!$forceInfer) {
+                return null;
+            }
+
+            $schema = new ObjectSchema();
         }
 
         // Attribute annotations
