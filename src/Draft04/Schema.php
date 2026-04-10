@@ -557,6 +557,9 @@ class Schema implements JsonSerializable
                 case 'stdClass':
                     $propertySchema = new ObjectSchema();
                     break;
+                case 'null':
+                    $propertySchema = new NullSchema();
+                    break;
                 case 'mixed':
                     $propertySchema = new Schema();
                     break;
@@ -604,7 +607,7 @@ class Schema implements JsonSerializable
                     }
             }
 
-            if ($typeReflection->allowsNull()) {
+            if ($typeReflection->allowsNull() && $typeReflection->getName() !== 'null') {
                 $propertySchema = new Schema(
                     oneOf: [
                         new NullSchema(),
@@ -617,13 +620,13 @@ class Schema implements JsonSerializable
         }
 
         if ($typeReflection instanceof ReflectionUnionType) {
-            $oneOf = [];
+            $anyOf = [];
             foreach ($typeReflection->getTypes() as $subTypeReflection) {
-                $oneOf[] = static::inferType($current, $root, $currentClassReflection, $subTypeReflection);
+                $anyOf[] = static::inferType($current, $root, $currentClassReflection, $subTypeReflection);
             }
 
             return new Schema(
-                oneOf: $oneOf
+                anyOf: $anyOf
             );
         }
 

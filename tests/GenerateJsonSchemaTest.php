@@ -273,6 +273,14 @@ final class ForceInfer
     }
 }
 
+final class ForceInferNullableUnion
+{
+    public function __construct(
+        public float|int|null $value,
+    ) {
+    }
+}
+
 final class GenerateJsonSchemaTest extends TestCase
 {
     public function testBasicSchema(): void
@@ -588,7 +596,7 @@ final class GenerateJsonSchemaTest extends TestCase
                         ],
                         'height' => [
                             'default' => 180,
-                            'oneOf' => [
+                            'anyOf' => [
                                 [
                                     'type' => 'string'
                                 ],
@@ -800,6 +808,50 @@ final class GenerateJsonSchemaTest extends TestCase
         $this->assertEquals(
             $rawSchema,
             Draft04Schema::classSchema(ForceInfer::class, forceInfer: true)->jsonSerialize(),
+        );
+    }
+
+    public function testForceInferNullableUnion04(): void
+    {
+        $rawSchema = [
+            '$schema' => Draft::Draft04->value,
+            'type' => 'object',
+            'properties' => [
+                'value' => [
+                    'anyOf' => [
+                        [
+                            'type' => 'integer'
+                        ],
+                        [
+                            'type' => 'number'
+                        ],
+                        [
+                            'type' => 'null'
+                        ],
+                    ]
+                ]
+            ],
+            'required' => [ 'value' ]
+        ];
+
+        $this->assertEquals(
+            $rawSchema,
+            Draft04Schema::classSchema(ForceInferNullableUnion::class, forceInfer: true)->jsonSerialize(),
+        );
+
+        $ast = (new Generator)->generateSchema($rawSchema);
+        $reconstructed = eval('return ' . (new PrettyPrinter\Standard())->prettyPrintExpr($ast) . ';');
+
+        $this->assertInstanceOf(Draft04Schema::class, $reconstructed);
+        $this->assertEquals($rawSchema, $reconstructed->jsonSerialize());
+
+        $entities = (new Draft04EntityGenerator(new Trunk($rawSchema), namespace: 'Test'))->generateEntities(ForceInferNullableUnion::class);
+
+        eval((new PrettyPrinter\Standard())->prettyPrint($entities));
+
+        $this->assertEquals(
+            $rawSchema,
+            Draft04Schema::classSchema(Test\ForceInferNullableUnion::class, forceInfer: true)->jsonSerialize(),
         );
     }
 }
